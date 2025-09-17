@@ -1,3 +1,3 @@
 # Tinyauth analytics
 
-A simple server to collect version information from Tinyauth instances. Fully transparent and full open source.
+A simple server to transparently collect version information from Tinyauth instances.
