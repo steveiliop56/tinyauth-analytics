@@ -132,5 +132,13 @@ func (m *RateLimitMiddleware) getClientIP(c *gin.Context) string {
 		return cfConnectingIP
 	}
 
-	return c.ClientIP()
+	clientIP := c.ClientIP()
+	remoteIP := c.RemoteIP()
+
+	// If we are using a proxy like Cloudflare we don't want to rame limit the proxy's IP
+	if clientIP == remoteIP {
+		return ""
+	}
+
+	return clientIP
 }
