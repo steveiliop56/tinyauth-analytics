@@ -58,7 +58,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	api := engine.Group("/api")
+	api := engine.Group("/v1")
 
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db)
 
