@@ -1,0 +1,14 @@
+services:
+  tinyauth-analytics:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8080
+      - ADDRESS=0.0.0.0
+      - TRUSTED_PROXIES=0.0.0.0
+    volumes:
+      - ./data:/data
+    ports:
+      - 8080:8080
+    restart: unless-stopped
