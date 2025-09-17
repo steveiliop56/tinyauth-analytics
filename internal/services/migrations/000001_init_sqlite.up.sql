@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS "rate_limits" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "ip" TEXT NOT NULL,
     "count" INTEGER NOT NULL,
-    "expire" INTEGER NOT NULL
+    "expiry" INTEGER NOT NULL
 );

@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"errors"
-	"strings"
 	"sync"
 	"time"
 	"tinyauth-analytics/internal/model"
@@ -80,16 +79,16 @@ func (m *RateLimitMiddleware) Middleware(count int64) gin.HandlerFunc {
 			return
 		}
 
-		if entry.Expire > 0 && entry.Expire < time.Now().UnixMilli() {
+		if entry.Expiry > 0 && entry.Expiry < time.Now().UnixMilli() {
 			entry.Count = 0
-			entry.Expire = 0
+			entry.Expiry = 0
 		}
 
 		entry.Count++
 
 		if entry.Count > count {
-			expire := time.Now().Add(time.Duration(24) * time.Hour).UnixMilli()
-			_, err := gorm.G[model.RateLimit](m.database).Where("id = ?", entry.ID).Update(ctx, "expire", fmt.Sprint(expire))
+			expiry := time.Now().Add(time.Duration(12) * time.Hour).UnixMilli()
+			_, err := gorm.G[model.RateLimit](m.database).Where("id = ?", entry.ID).Update(ctx, "expiry", fmt.Sprint(expiry))
 			if err != nil {
 				c.JSON(500, gin.H{
 					"status":  500,
@@ -100,7 +99,7 @@ func (m *RateLimitMiddleware) Middleware(count int64) gin.HandlerFunc {
 			}
 			c.Header("x-ratelimit-remaining", "0")
 			c.Header("x-ratelimit-used", fmt.Sprint(count))
-			c.Header("x-ratelimit-reset", fmt.Sprint(expire))
+			c.Header("x-ratelimit-reset", fmt.Sprint(expiry))
 			c.JSON(429, gin.H{
 				"status":  429,
 				"message": "Rate limit exceeded",
@@ -127,18 +126,11 @@ func (m *RateLimitMiddleware) Middleware(count int64) gin.HandlerFunc {
 }
 
 func (m *RateLimitMiddleware) getClientIP(c *gin.Context) string {
-	cfIP := c.GetHeader("CF-Connecting-IP")
+	cfConnectingIP := c.GetHeader("CF-Connecting-IP")
 
-	if cfIP != "" {
-		return cfIP
+	if cfConnectingIP != "" {
+		return cfConnectingIP
 	}
 
-	ginIP := c.ClientIP()
-	remoteIP := c.Request.RemoteAddr
-
-	if strings.Split(remoteIP, ":")[0] == ginIP {
-		return ""
-	}
-
-	return ginIP
+	return c.ClientIP()
 }

@@ -10,7 +10,8 @@
       "env": {
         "DB_PATH": "./data/analytics.db",
         "PORT": "8080",
-        "ADDRESS": "0.0.0.0"
+        "ADDRESS": "0.0.0.0",
+        "TRUSTED_PROXIES": "0.0.0.0"
       }
     }
   ]

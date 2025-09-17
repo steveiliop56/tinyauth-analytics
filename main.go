@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 	"time"
 	"tinyauth-analytics/internal/controller"
 	"tinyauth-analytics/internal/middleware"
@@ -37,6 +38,8 @@ func main() {
 		address = "0.0.0.0"
 	}
 
+	trustedProxies := os.Getenv("TRUSTED_PROXIES")
+
 	dbSvc := services.NewDatabaseService(services.DatabaseServiceConfig{
 		DatabasePath: dbPath,
 	})
@@ -48,6 +51,8 @@ func main() {
 	db := dbSvc.GetDatabase()
 
 	engine := gin.Default()
+
+	engine.SetTrustedProxies(strings.Split(trustedProxies, ","))
 
 	if version != "development" {
 		gin.SetMode(gin.ReleaseMode)
