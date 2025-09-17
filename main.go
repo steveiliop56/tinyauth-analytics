@@ -50,13 +50,13 @@ func main() {
 
 	db := dbSvc.GetDatabase()
 
-	engine := gin.Default()
-
-	engine.SetTrustedProxies(strings.Split(trustedProxies, ","))
-
 	if version != "development" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	engine := gin.Default()
+
+	engine.SetTrustedProxies(strings.Split(trustedProxies, ","))
 
 	api := engine.Group("/v1")
 
