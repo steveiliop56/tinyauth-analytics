@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS "instances" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "uuid" TEXT NOT NULL,
+    "version" TEXT NOT NULL,
+    "last_seen" INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "rate_limits" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "ip" TEXT NOT NULL,
+    "count" INTEGER NOT NULL,
+    "expire" INTEGER NOT NULL
+);
