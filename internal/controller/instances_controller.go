@@ -19,27 +19,27 @@ type Hearbeat struct {
 	UUID    string `json:"uuid"`
 }
 
-type InstanceController struct {
+type InstancesController struct {
 	database  *gorm.DB
 	router    *gin.RouterGroup
 	rateLimit RateLimit
 }
 
-func NewInstanceController(router *gin.RouterGroup, database *gorm.DB, rateLimit RateLimit) *InstanceController {
-	return &InstanceController{
+func NewInstancesController(router *gin.RouterGroup, database *gorm.DB, rateLimit RateLimit) *InstancesController {
+	return &InstancesController{
 		database:  database,
 		router:    router,
 		rateLimit: rateLimit,
 	}
 }
 
-func (ic *InstanceController) SetupRoutes() {
+func (ic *InstancesController) SetupRoutes() {
 	instancesGroup := ic.router.Group("/instances")
 	instancesGroup.GET("/all", ic.listAllInstances)
 	instancesGroup.POST("/heartbeat", ic.rateLimit.Middleware(2), ic.heartbeat)
 }
 
-func (ic *InstanceController) listAllInstances(c *gin.Context) {
+func (ic *InstancesController) listAllInstances(c *gin.Context) {
 	ctx := context.Background()
 
 	instances, err := gorm.G[model.Instance](ic.database).Find(ctx)
@@ -58,7 +58,7 @@ func (ic *InstanceController) listAllInstances(c *gin.Context) {
 	})
 }
 
-func (ic *InstanceController) heartbeat(c *gin.Context) {
+func (ic *InstancesController) heartbeat(c *gin.Context) {
 	var heartbeat Hearbeat
 
 	if err := c.BindJSON(&heartbeat); err != nil {
@@ -80,11 +80,13 @@ func (ic *InstanceController) heartbeat(c *gin.Context) {
 		return
 	}
 
+	t := time.Now().UnixMilli()
+
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err := gorm.G[model.Instance](ic.database).Create(ctx, &model.Instance{
 			UUID:     heartbeat.UUID,
 			Version:  heartbeat.Version,
-			LastSeen: time.Now().UnixMilli(),
+			LastSeen: t,
 		})
 
 		if err != nil {
@@ -102,9 +104,7 @@ func (ic *InstanceController) heartbeat(c *gin.Context) {
 		return
 	}
 
-	instance.LastSeen = time.Now().UnixMilli()
-
-	_, err = gorm.G[model.Instance](ic.database).Where("uuid = ?", instance.ID).Update(ctx, "last_seen", instance.LastSeen)
+	_, err = gorm.G[model.Instance](ic.database).Where("id = ?", instance.ID).Update(ctx, "last_seen", t)
 
 	if err != nil {
 		c.JSON(500, gin.H{

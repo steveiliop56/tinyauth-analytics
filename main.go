@@ -62,7 +62,7 @@ func main() {
 
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db)
 
-	instancesCtrl := controller.NewInstanceController(api, db, rateLimitMiddleware)
+	instancesCtrl := controller.NewInstancesController(api, db, rateLimitMiddleware)
 
 	instancesCtrl.SetupRoutes()
 
