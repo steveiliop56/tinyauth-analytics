@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - VERSION=development
     environment:
       - PORT=8080
       - ADDRESS=0.0.0.0

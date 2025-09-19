@@ -68,6 +68,10 @@ func main() {
 
 	instancesCtrl.SetupRoutes()
 
+	healthCtrl := controller.NewHealthController(api)
+
+	healthCtrl.SetupRoutes()
+
 	go clearOldSessions(db)
 
 	log.Printf("Starting analytics server on %s:%s (version: %s)", address, port, version)
