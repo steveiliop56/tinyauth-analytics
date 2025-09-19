@@ -11,7 +11,7 @@ import (
 )
 
 type RateLimit interface {
-	Middleware(count int64) gin.HandlerFunc
+	Middleware(count int) gin.HandlerFunc
 }
 
 type Hearbeat struct {
@@ -54,6 +54,7 @@ func (ic *InstancesController) listAllInstances(c *gin.Context) {
 
 	c.JSON(200, map[string]any{
 		"status":    200,
+		"total":     len(instances),
 		"instances": instances,
 	})
 }

@@ -1,11 +1,9 @@
 package middleware
 
 import (
-	"context"
-	"errors"
 	"sync"
 	"time"
-	"tinyauth-analytics/internal/model"
+	"tinyauth-analytics/internal/service"
 
 	"fmt"
 
@@ -15,12 +13,14 @@ import (
 
 type RateLimitMiddleware struct {
 	database *gorm.DB
+	cache    *service.CacheService
 	mutex    sync.RWMutex
 }
 
-func NewRateLimitMiddleware(database *gorm.DB) *RateLimitMiddleware {
+func NewRateLimitMiddleware(database *gorm.DB, cache *service.CacheService) *RateLimitMiddleware {
 	return &RateLimitMiddleware{
 		database: database,
+		cache:    cache,
 	}
 }
 
@@ -28,7 +28,7 @@ func (m *RateLimitMiddleware) Init() error {
 	return nil
 }
 
-func (m *RateLimitMiddleware) Middleware(count int64) gin.HandlerFunc {
+func (m *RateLimitMiddleware) Middleware(count int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
@@ -44,62 +44,24 @@ func (m *RateLimitMiddleware) Middleware(count int64) gin.HandlerFunc {
 			return
 		}
 
-		ctx := context.Background()
-
-		entry, err := gorm.G[model.RateLimit](m.database).First(ctx)
-
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(500, gin.H{
-				"status":  500,
-				"message": "Database error",
-			})
-			c.Abort()
-			return
-		}
+		value, exists := m.cache.Get(clientIP)
 
 		c.Header("x-ratelimit-limit", fmt.Sprint(count))
+		c.Header("x-ratelimit-reset", fmt.Sprint(time.Now().Add(time.Duration(24)*time.Hour).Unix()))
 
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if !exists {
+			m.cache.Set(clientIP, 1, 86400) // 1 day TTL
 			c.Header("x-ratelimit-remaining", fmt.Sprint(count-1))
 			c.Header("x-ratelimit-used", fmt.Sprint(1))
-			ctx := context.Background()
-			err := gorm.G[model.RateLimit](m.database).Create(ctx, &model.RateLimit{
-				Count: 1,
-				IP:    clientIP,
-			})
-			if err != nil {
-				c.JSON(500, gin.H{
-					"status":  500,
-					"message": "Database error",
-				})
-				c.Abort()
-				return
-			}
 			c.Next()
 			return
 		}
 
-		if entry.Expiry > 0 && entry.Expiry < time.Now().UnixMilli() {
-			entry.Count = 0
-			entry.Expiry = 0
-		}
+		used := value.(int) + 1
 
-		entry.Count++
-
-		if entry.Count > count {
-			expiry := time.Now().Add(time.Duration(12) * time.Hour).UnixMilli()
-			_, err := gorm.G[model.RateLimit](m.database).Where("id = ?", entry.ID).Update(ctx, "expiry", fmt.Sprint(expiry))
-			if err != nil {
-				c.JSON(500, gin.H{
-					"status":  500,
-					"message": "Database error",
-				})
-				c.Abort()
-				return
-			}
-			c.Header("x-ratelimit-remaining", "0")
-			c.Header("x-ratelimit-used", fmt.Sprint(count))
-			c.Header("x-ratelimit-reset", fmt.Sprint(expiry))
+		if used > count {
+			c.Header("x-ratelimit-remaining", fmt.Sprint(0))
+			c.Header("x-ratelimit-used", fmt.Sprint(used))
 			c.JSON(429, gin.H{
 				"status":  429,
 				"message": "Rate limit exceeded",
@@ -108,19 +70,10 @@ func (m *RateLimitMiddleware) Middleware(count int64) gin.HandlerFunc {
 			return
 		}
 
-		_, err = gorm.G[model.RateLimit](m.database).Where("id = ?", entry.ID).Update(ctx, "count", entry.Count)
+		m.cache.Set(clientIP, used, 86400) // 1 day TTL
 
-		if err != nil {
-			c.JSON(500, gin.H{
-				"status":  500,
-				"message": "Database error",
-			})
-			c.Abort()
-			return
-		}
-
-		c.Header("x-ratelimit-remaining", fmt.Sprint(count-entry.Count))
-		c.Header("x-ratelimit-used", fmt.Sprint(entry.Count))
+		c.Header("x-ratelimit-remaining", fmt.Sprint(count-used))
+		c.Header("x-ratelimit-used", fmt.Sprint(used))
 		c.Next()
 	}
 }

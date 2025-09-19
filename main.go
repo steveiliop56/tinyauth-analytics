@@ -9,7 +9,7 @@ import (
 	"tinyauth-analytics/internal/controller"
 	"tinyauth-analytics/internal/middleware"
 	"tinyauth-analytics/internal/model"
-	"tinyauth-analytics/internal/services"
+	"tinyauth-analytics/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -40,7 +40,7 @@ func main() {
 
 	trustedProxies := os.Getenv("TRUSTED_PROXIES")
 
-	dbSvc := services.NewDatabaseService(services.DatabaseServiceConfig{
+	dbSvc := service.NewDatabaseService(service.DatabaseServiceConfig{
 		DatabasePath: dbPath,
 	})
 
@@ -49,6 +49,8 @@ func main() {
 	}
 
 	db := dbSvc.GetDatabase()
+
+	cacheSvc := service.NewCacheService()
 
 	if version != "development" {
 		gin.SetMode(gin.ReleaseMode)
@@ -60,7 +62,7 @@ func main() {
 
 	api := engine.Group("/v1")
 
-	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db)
+	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db, cacheSvc)
 
 	instancesCtrl := controller.NewInstancesController(api, db, rateLimitMiddleware)
 

@@ -4,10 +4,3 @@ CREATE TABLE IF NOT EXISTS "instances" (
     "version" TEXT NOT NULL,
     "last_seen" INTEGER NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS "rate_limits" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "ip" TEXT NOT NULL,
-    "count" INTEGER NOT NULL,
-    "expiry" INTEGER NOT NULL
-);
