@@ -12,15 +12,17 @@ import (
 )
 
 type RateLimitMiddleware struct {
-	database *gorm.DB
-	cache    *service.CacheService
-	mutex    sync.RWMutex
+	database       *gorm.DB
+	cache          *service.CacheService
+	mutex          sync.RWMutex
+	rateLimitCount int
 }
 
-func NewRateLimitMiddleware(database *gorm.DB, cache *service.CacheService) *RateLimitMiddleware {
+func NewRateLimitMiddleware(database *gorm.DB, cache *service.CacheService, rateLimitCount int) *RateLimitMiddleware {
 	return &RateLimitMiddleware{
-		database: database,
-		cache:    cache,
+		database:       database,
+		cache:          cache,
+		rateLimitCount: rateLimitCount,
 	}
 }
 
@@ -28,7 +30,7 @@ func (m *RateLimitMiddleware) Init() error {
 	return nil
 }
 
-func (m *RateLimitMiddleware) Middleware(count int) gin.HandlerFunc {
+func (m *RateLimitMiddleware) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
@@ -46,12 +48,12 @@ func (m *RateLimitMiddleware) Middleware(count int) gin.HandlerFunc {
 
 		value, exists := m.cache.Get(clientIP)
 
-		c.Header("x-ratelimit-limit", fmt.Sprint(count))
+		c.Header("x-ratelimit-limit", fmt.Sprint(m.rateLimitCount))
 		c.Header("x-ratelimit-reset", fmt.Sprint(time.Now().Add(time.Duration(24)*time.Hour).Unix()))
 
 		if !exists {
 			m.cache.Set(clientIP, 1, 86400) // 1 day TTL
-			c.Header("x-ratelimit-remaining", fmt.Sprint(count-1))
+			c.Header("x-ratelimit-remaining", fmt.Sprint(m.rateLimitCount-1))
 			c.Header("x-ratelimit-used", fmt.Sprint(1))
 			c.Next()
 			return
@@ -59,7 +61,7 @@ func (m *RateLimitMiddleware) Middleware(count int) gin.HandlerFunc {
 
 		used := value.(int) + 1
 
-		if used > count {
+		if used > m.rateLimitCount {
 			c.Header("x-ratelimit-remaining", fmt.Sprint(0))
 			c.Header("x-ratelimit-used", fmt.Sprint(used))
 			c.JSON(429, gin.H{
@@ -72,7 +74,7 @@ func (m *RateLimitMiddleware) Middleware(count int) gin.HandlerFunc {
 
 		m.cache.Set(clientIP, used, 86400) // 1 day TTL
 
-		c.Header("x-ratelimit-remaining", fmt.Sprint(count-used))
+		c.Header("x-ratelimit-remaining", fmt.Sprint(m.rateLimitCount-used))
 		c.Header("x-ratelimit-used", fmt.Sprint(used))
 		c.Next()
 	}

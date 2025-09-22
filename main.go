@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"tinyauth-analytics/internal/controller"
@@ -38,6 +39,22 @@ func main() {
 		address = "0.0.0.0"
 	}
 
+	var rateLimitCount int
+
+	rateLimitCountStr := os.Getenv("RATE_LIMIT_COUNT")
+
+	if rateLimitCountStr == "" {
+		rateLimitCount = 3
+	} else {
+		var err error
+
+		rateLimitCount, err = strconv.Atoi(rateLimitCountStr)
+
+		if err != nil {
+			log.Fatal("invalid RATE_LIMIT_COUNT:", err)
+		}
+	}
+
 	trustedProxies := os.Getenv("TRUSTED_PROXIES")
 
 	dbSvc := service.NewDatabaseService(service.DatabaseServiceConfig{
@@ -62,7 +79,7 @@ func main() {
 
 	api := engine.Group("/v1")
 
-	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db, cacheSvc)
+	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db, cacheSvc, rateLimitCount)
 
 	instancesCtrl := controller.NewInstancesController(api, db, rateLimitMiddleware)
 

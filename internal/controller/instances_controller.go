@@ -11,7 +11,7 @@ import (
 )
 
 type RateLimit interface {
-	Middleware(count int) gin.HandlerFunc
+	Middleware() gin.HandlerFunc
 }
 
 type Hearbeat struct {
@@ -36,7 +36,7 @@ func NewInstancesController(router *gin.RouterGroup, database *gorm.DB, rateLimi
 func (ic *InstancesController) SetupRoutes() {
 	instancesGroup := ic.router.Group("/instances")
 	instancesGroup.GET("/all", ic.listAllInstances)
-	instancesGroup.POST("/heartbeat", ic.rateLimit.Middleware(2), ic.heartbeat)
+	instancesGroup.POST("/heartbeat", ic.rateLimit.Middleware(), ic.heartbeat)
 }
 
 func (ic *InstancesController) listAllInstances(c *gin.Context) {
