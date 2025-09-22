@@ -69,10 +69,6 @@ func main() {
 
 	cacheSvc := service.NewCacheService()
 
-	if version != "development" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
 	engine := gin.Default()
 
 	engine.SetTrustedProxies(strings.Split(trustedProxies, ","))
