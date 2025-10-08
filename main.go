@@ -12,6 +12,7 @@ import (
 	"tinyauth-analytics/internal/model"
 	"tinyauth-analytics/internal/service"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -70,6 +71,8 @@ func main() {
 	cacheSvc := service.NewCacheService()
 
 	engine := gin.Default()
+
+	engine.Use(cors.Default())
 
 	engine.SetTrustedProxies(strings.Split(trustedProxies, ","))
 
