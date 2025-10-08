@@ -56,6 +56,16 @@ func main() {
 		}
 	}
 
+	var corsAllowedOrigins []string
+
+	corsAllowedOriginsStr := os.Getenv("CORS_ALLOWED_ORIGINS")
+
+	if corsAllowedOriginsStr != "" {
+		corsAllowedOrigins = append(corsAllowedOrigins, strings.Split(corsAllowedOriginsStr, ",")...)
+	} else {
+		corsAllowedOrigins = append(corsAllowedOrigins, "*")
+	}
+
 	trustedProxies := os.Getenv("TRUSTED_PROXIES")
 
 	dbSvc := service.NewDatabaseService(service.DatabaseServiceConfig{
@@ -72,7 +82,11 @@ func main() {
 
 	engine := gin.Default()
 
-	engine.Use(cors.Default())
+	engine.Use(cors.New(
+		cors.Config{
+			AllowOrigins: corsAllowedOrigins,
+		},
+	))
 
 	engine.SetTrustedProxies(strings.Split(trustedProxies, ","))
 
