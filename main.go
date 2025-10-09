@@ -79,7 +79,7 @@ func main() {
 
 	zerologMiddleware := middleware.NewZerologMiddleware(log.Logger.GetLevel())
 
-	engine := gin.Default()
+	engine := gin.New()
 	engine.Use(gin.Recovery())
 	engine.Use(zerologMiddleware.Middleware())
 
