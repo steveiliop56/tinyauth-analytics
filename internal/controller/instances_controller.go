@@ -7,6 +7,7 @@ import (
 	"tinyauth-analytics/internal/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -45,6 +46,7 @@ func (ic *InstancesController) listAllInstances(c *gin.Context) {
 	instances, err := gorm.G[model.Instance](ic.database).Find(ctx)
 
 	if err != nil {
+		log.Error().Err(err).Msg("failed to fetch instances")
 		c.JSON(500, gin.H{
 			"status":  500,
 			"message": "Database error",
@@ -74,6 +76,7 @@ func (ic *InstancesController) heartbeat(c *gin.Context) {
 	instance, err := gorm.G[model.Instance](ic.database).Where("uuid = ?", heartbeat.UUID).First(ctx)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error().Err(err).Msg("failed to fetch instance")
 		c.JSON(500, gin.H{
 			"status":  500,
 			"message": "Database error",
@@ -91,6 +94,7 @@ func (ic *InstancesController) heartbeat(c *gin.Context) {
 		})
 
 		if err != nil {
+			log.Error().Err(err).Msg("failed to create instance")
 			c.JSON(500, gin.H{
 				"status":  500,
 				"message": "Database error",
@@ -108,6 +112,7 @@ func (ic *InstancesController) heartbeat(c *gin.Context) {
 	_, err = gorm.G[model.Instance](ic.database).Where("id = ?", instance.ID).Update(ctx, "last_seen", t)
 
 	if err != nil {
+		log.Error().Err(err).Msg("failed to update instance")
 		c.JSON(500, gin.H{
 			"status":  500,
 			"message": "Database error",

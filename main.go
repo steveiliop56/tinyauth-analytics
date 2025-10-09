@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"log/slog"
+	"os"
 	"time"
 	"tinyauth-analytics/internal/controller"
 	"tinyauth-analytics/internal/middleware"
@@ -13,6 +11,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
 )
@@ -30,10 +30,7 @@ type config struct {
 }
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(log.Writer(), &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
-	slog.SetDefault(logger)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).With().Timestamp().Caller().Logger().Level(zerolog.FatalLevel)
 
 	v := viper.New()
 
@@ -50,20 +47,22 @@ func main() {
 	var conf config
 
 	if err := v.Unmarshal(&conf); err != nil {
-		slog.Error("failed to parse config", "error", err)
+		log.Fatal().Err(err).Msg("failed to parse config")
 	}
 
 	switch conf.LogLevel {
 	case "debug":
-		slog.SetLogLoggerLevel(slog.LevelDebug)
+		log.Level(zerolog.DebugLevel)
 	case "info":
-		slog.SetLogLoggerLevel(slog.LevelInfo)
+		log.Level(zerolog.InfoLevel)
 	case "warn":
-		slog.SetLogLoggerLevel(slog.LevelWarn)
+		log.Level(zerolog.WarnLevel)
 	case "error":
-		slog.SetLogLoggerLevel(slog.LevelError)
+		log.Level(zerolog.ErrorLevel)
+	case "fatal":
+		log.Level(zerolog.FatalLevel)
 	default:
-		slog.Error("invalid log level", "level", conf.LogLevel)
+		log.Fatal().Str("level", conf.LogLevel).Msg("invalid log level")
 	}
 
 	dbSvc := service.NewDatabaseService(service.DatabaseServiceConfig{
@@ -71,19 +70,18 @@ func main() {
 	})
 
 	if err := dbSvc.Init(); err != nil {
-		slog.Error("failed to initialize database", "error", err)
+		log.Fatal().Err(err).Msg("failed to initialize database")
 	}
 
 	db := dbSvc.GetDatabase()
 
 	cacheSvc := service.NewCacheService()
 
+	zerologMiddleware := middleware.NewZerologMiddleware(log.Logger.GetLevel())
+
 	engine := gin.Default()
 	engine.Use(gin.Recovery())
-
-	if conf.LogLevel == "debug" || conf.LogLevel == "info" {
-		engine.Use(gin.Logger())
-	}
+	engine.Use(zerologMiddleware.Middleware())
 
 	engine.Use(cors.New(
 		cors.Config{
@@ -107,10 +105,10 @@ func main() {
 
 	go clearOldSessions(db)
 
-	slog.Info("starting analytics server", "address", conf.Address, "port", conf.Port, "version", version)
+	log.Info().Str("port", conf.Port).Str("address", conf.Address).Msg("starting server, version " + version)
 
 	if err := engine.Run(conf.Address + ":" + conf.Port); err != nil {
-		slog.Error("failed to start server", "error", err)
+		log.Fatal().Err(err).Msg("server error")
 	}
 }
 
@@ -119,17 +117,17 @@ func clearOldSessions(db *gorm.DB) {
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
-		slog.Info("clearing old sessions")
+		log.Info().Msg("clearing old sessions")
 
 		ctx := context.Background()
 		cutoffTime := time.Now().Add(time.Duration(-48) * time.Hour).UnixMilli()
 		rowsAffected, err := gorm.G[model.Instance](db).Where("last_seen < ?", cutoffTime).Delete(ctx)
 
 		if err != nil {
-			slog.Warn("failed to clear old sessions: ", "error", err)
+			log.Warn().Err(err).Msg("failed to clear old sessions")
 			continue
 		}
 
-		slog.Info(fmt.Sprintf("cleared %d old sessions", rowsAffected))
+		log.Info().Msgf("cleared %d old sessions", rowsAffected)
 	}
 }
