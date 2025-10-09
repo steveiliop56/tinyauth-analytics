@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"os"
-	"strconv"
-	"strings"
+	"log/slog"
 	"time"
 	"tinyauth-analytics/internal/controller"
 	"tinyauth-analytics/internal/middleware"
@@ -14,66 +13,65 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"gorm.io/gorm"
 )
 
 var version = "development"
 
+type config struct {
+	DatabasePath       string   `mapstructure:"db_path"`
+	Port               string   `mapstructure:"port"`
+	Address            string   `mapstructure:"address"`
+	RateLimitCount     int      `mapstructure:"rate_limit_count"`
+	CORSAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
+	TrustedProxies     []string `mapstructure:"trusted_proxies"`
+	LogLevel           string   `mapstructure:"log_level"`
+}
+
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	logger := slog.New(slog.NewTextHandler(log.Writer(), &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
 
-	dbPath := os.Getenv("DB_PATH")
+	v := viper.New()
 
-	if dbPath == "" {
-		dbPath = "/data/analytics.db"
+	v.AutomaticEnv()
+
+	v.SetDefault("db_path", "/data/analytics.db")
+	v.SetDefault("port", "8080")
+	v.SetDefault("address", "0.0.0.0")
+	v.SetDefault("rate_limit_count", 3)
+	v.SetDefault("cors_allowed_origins", "*")
+	v.SetDefault("trusted_proxies", "")
+	v.SetDefault("log_level", "info")
+
+	var conf config
+
+	if err := v.Unmarshal(&conf); err != nil {
+		slog.Error("failed to parse config", "error", err)
 	}
 
-	port := os.Getenv("PORT")
-
-	if port == "" {
-		port = "8080"
+	switch conf.LogLevel {
+	case "debug":
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	case "info":
+		slog.SetLogLoggerLevel(slog.LevelInfo)
+	case "warn":
+		slog.SetLogLoggerLevel(slog.LevelWarn)
+	case "error":
+		slog.SetLogLoggerLevel(slog.LevelError)
+	default:
+		slog.Error("invalid log level", "level", conf.LogLevel)
 	}
-
-	address := os.Getenv("ADDRESS")
-
-	if address == "" {
-		address = "0.0.0.0"
-	}
-
-	var rateLimitCount int
-
-	rateLimitCountStr := os.Getenv("RATE_LIMIT_COUNT")
-
-	if rateLimitCountStr == "" {
-		rateLimitCount = 3
-	} else {
-		var err error
-
-		rateLimitCount, err = strconv.Atoi(rateLimitCountStr)
-
-		if err != nil {
-			log.Fatal("invalid RATE_LIMIT_COUNT:", err)
-		}
-	}
-
-	var corsAllowedOrigins []string
-
-	corsAllowedOriginsStr := os.Getenv("CORS_ALLOWED_ORIGINS")
-
-	if corsAllowedOriginsStr != "" {
-		corsAllowedOrigins = append(corsAllowedOrigins, strings.Split(corsAllowedOriginsStr, ",")...)
-	} else {
-		corsAllowedOrigins = append(corsAllowedOrigins, "*")
-	}
-
-	trustedProxies := os.Getenv("TRUSTED_PROXIES")
 
 	dbSvc := service.NewDatabaseService(service.DatabaseServiceConfig{
-		DatabasePath: dbPath,
+		DatabasePath: conf.DatabasePath,
 	})
 
 	if err := dbSvc.Init(); err != nil {
-		log.Fatal("failed to initialize database:", err)
+		slog.Error("failed to initialize database", "error", err)
 	}
 
 	db := dbSvc.GetDatabase()
@@ -81,18 +79,23 @@ func main() {
 	cacheSvc := service.NewCacheService()
 
 	engine := gin.Default()
+	engine.Use(gin.Recovery())
+
+	if conf.LogLevel == "debug" || conf.LogLevel == "info" {
+		engine.Use(gin.Logger())
+	}
 
 	engine.Use(cors.New(
 		cors.Config{
-			AllowOrigins: corsAllowedOrigins,
+			AllowOrigins: conf.CORSAllowedOrigins,
 		},
 	))
 
-	engine.SetTrustedProxies(strings.Split(trustedProxies, ","))
+	engine.SetTrustedProxies(conf.TrustedProxies)
 
 	api := engine.Group("/v1")
 
-	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db, cacheSvc, rateLimitCount)
+	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db, cacheSvc, conf.RateLimitCount)
 
 	instancesCtrl := controller.NewInstancesController(api, db, rateLimitMiddleware)
 
@@ -104,10 +107,10 @@ func main() {
 
 	go clearOldSessions(db)
 
-	log.Printf("Starting analytics server on %s:%s (version: %s)", address, port, version)
+	slog.Info("starting analytics server", "address", conf.Address, "port", conf.Port, "version", version)
 
-	if err := engine.Run(address + ":" + port); err != nil {
-		log.Fatal("failed to start server:", err)
+	if err := engine.Run(conf.Address + ":" + conf.Port); err != nil {
+		slog.Error("failed to start server", "error", err)
 	}
 }
 
@@ -116,17 +119,17 @@ func clearOldSessions(db *gorm.DB) {
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
-		log.Println("Clearing old sessions")
+		slog.Info("clearing old sessions")
 
 		ctx := context.Background()
 		cutoffTime := time.Now().Add(time.Duration(-48) * time.Hour).UnixMilli()
 		rowsAffected, err := gorm.G[model.Instance](db).Where("last_seen < ?", cutoffTime).Delete(ctx)
 
 		if err != nil {
-			log.Println("Failed to clear old sessions:", err)
+			slog.Warn("failed to clear old sessions: ", "error", err)
 			continue
 		}
 
-		log.Printf("Cleared %d old sessions\n", rowsAffected)
+		slog.Info(fmt.Sprintf("cleared %d old sessions", rowsAffected))
 	}
 }
