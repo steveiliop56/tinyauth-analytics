@@ -30,7 +30,7 @@ type config struct {
 }
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).With().Timestamp().Caller().Logger().Level(zerolog.FatalLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).With().Timestamp().Caller().Logger()
 
 	v := viper.New()
 
@@ -52,15 +52,15 @@ func main() {
 
 	switch conf.LogLevel {
 	case "debug":
-		log.Level(zerolog.DebugLevel)
+		log.Logger = log.Level(zerolog.DebugLevel)
 	case "info":
-		log.Level(zerolog.InfoLevel)
+		log.Logger = log.Level(zerolog.InfoLevel)
 	case "warn":
-		log.Level(zerolog.WarnLevel)
+		log.Logger = log.Level(zerolog.WarnLevel)
 	case "error":
-		log.Level(zerolog.ErrorLevel)
+		log.Logger = log.Level(zerolog.ErrorLevel)
 	case "fatal":
-		log.Level(zerolog.FatalLevel)
+		log.Logger = log.Level(zerolog.FatalLevel)
 	default:
 		log.Fatal().Str("level", conf.LogLevel).Msg("invalid log level")
 	}
