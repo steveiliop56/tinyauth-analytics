@@ -38,4 +38,6 @@ USER tinyauth-analytics
 
 ENV GIN_MODE=release
 
-ENTRYPOINT ["./tinyauth-analytics"]
+ENV PATH=$PATH:/tinyauth-analytics
+
+ENTRYPOINT ["tinyauth-analytics"]
