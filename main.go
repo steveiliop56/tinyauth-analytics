@@ -51,6 +51,8 @@ func main() {
 	}
 
 	switch conf.LogLevel {
+	case "trace":
+		log.Logger = log.Level(zerolog.TraceLevel)
 	case "debug":
 		log.Logger = log.Level(zerolog.DebugLevel)
 	case "info":
@@ -61,6 +63,8 @@ func main() {
 		log.Logger = log.Level(zerolog.ErrorLevel)
 	case "fatal":
 		log.Logger = log.Level(zerolog.FatalLevel)
+	case "panic":
+		log.Logger = log.Level(zerolog.PanicLevel)
 	default:
 		log.Fatal().Str("level", conf.LogLevel).Msg("invalid log level")
 	}

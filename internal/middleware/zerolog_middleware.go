@@ -13,8 +13,8 @@ type ZerologMiddleware struct {
 }
 
 func NewZerologMiddleware(level zerolog.Level) *ZerologMiddleware {
-	if level == zerolog.DebugLevel {
-		log.Warn().Msg("Zerolog debug level is enabled. This may expose sensitive information in the logs.")
+	if level == zerolog.DebugLevel || level == zerolog.TraceLevel {
+		log.Warn().Msg("Verbose log level is enabled. This may expose sensitive information in the logs.")
 	}
 
 	return &ZerologMiddleware{

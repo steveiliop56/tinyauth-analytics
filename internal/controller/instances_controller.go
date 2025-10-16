@@ -109,7 +109,10 @@ func (ic *InstancesController) heartbeat(c *gin.Context) {
 		return
 	}
 
-	_, err = gorm.G[model.Instance](ic.database).Where("id = ?", instance.ID).Update(ctx, "last_seen", t)
+	_, err = gorm.G[model.Instance](ic.database).Where("id = ?", instance.ID).Updates(ctx, model.Instance{
+		Version:  heartbeat.Version,
+		LastSeen: t,
+	})
 
 	if err != nil {
 		log.Error().Err(err).Msg("failed to update instance")
