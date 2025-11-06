@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const pageSize = 10
+
 //go:embed dashboard.html
 var dashboardTemplate string
 
@@ -28,6 +30,7 @@ type dashboardData struct {
 	TotalInstances  int
 	MostUsedVersion string
 	Instances       []instance
+	MaxPages        int
 	NextPage        int
 }
 
@@ -35,6 +38,7 @@ type dashboardHandler struct {
 	api             string
 	totalInstances  int
 	mostUsedVersion string
+	maxPages        int
 	pages           [][]instance
 }
 
@@ -61,11 +65,10 @@ func getInstances(api string) (instancesResponse, error) {
 func parseInstancesToPages(instances []instance, pageSize int) [][]instance {
 	var pages [][]instance
 
-	for len(pages) < len(instances) {
+	for len(pages) < len(instances)/pageSize {
 		pages = append(pages, instances[len(pages):len(pages)+pageSize])
 	}
 
-	pages = append(pages, instances)
 	return pages
 }
 
@@ -130,7 +133,8 @@ func (h *dashboardHandler) loadData() error {
 	}
 
 	h.totalInstances = instancesResp.Total
-	h.pages = parseInstancesToPages(instancesResp.Instances, 10)
+	h.maxPages = instancesResp.Total / pageSize
+	h.pages = parseInstancesToPages(instancesResp.Instances, pageSize)
 	h.mostUsedVersion = getMostUsedVersion(instancesResp.Instances)
 
 	return nil
@@ -159,6 +163,7 @@ func (h *dashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		TotalInstances:  h.totalInstances,
 		MostUsedVersion: h.mostUsedVersion,
 		Instances:       bundleInstances(h.pages, page+1),
+		MaxPages:        h.maxPages,
 		NextPage:        page + 1,
 	})
 

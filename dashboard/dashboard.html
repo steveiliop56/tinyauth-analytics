@@ -132,11 +132,13 @@
             </tbody>
           </table>
         </div>
+        {{if lt .NextPage .MaxPages }}
         <a
           href="?page={{.NextPage}}"
           class="text-center text-fd-muted-foreground text-md hover:underline hover:cursor-pointer"
           >Load more...</a
         >
+        {{end}}
       </div>
     </main>
     <footer
