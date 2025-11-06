@@ -141,35 +141,42 @@ func (h *dashboardHandler) loadData() error {
 }
 
 func (h *dashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	page := 0
-	query := r.URL.Query()
+	switch r.URL.Path {
+	case "/":
+		page := 0
+		query := r.URL.Query()
 
-	if val, ok := query["page"]; ok && len(val) > 0 {
-		var err error
-		page, err = strconv.Atoi(val[0])
-		if err != nil || page < 0 || page >= len(h.pages) {
-			http.Error(w, "invalid page number", http.StatusBadRequest)
+		if val, ok := query["page"]; ok && len(val) > 0 {
+			var err error
+			page, err = strconv.Atoi(val[0])
+			if err != nil || page < 0 || page >= len(h.pages) {
+				http.Error(w, "invalid page number", http.StatusBadRequest)
+				return
+			}
+		}
+
+		tmpl, err := template.New("dashboard").Parse(dashboardTemplate)
+		if err != nil {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-	}
 
-	tmpl, err := template.New("dashboard").Parse(dashboardTemplate)
-	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
+		err = tmpl.Execute(w, dashboardData{
+			TotalInstances:  h.totalInstances,
+			MostUsedVersion: h.mostUsedVersion,
+			Instances:       bundleInstances(h.pages, page+1),
+			MaxPages:        h.maxPages,
+			NextPage:        page + 1,
+		})
 
-	err = tmpl.Execute(w, dashboardData{
-		TotalInstances:  h.totalInstances,
-		MostUsedVersion: h.mostUsedVersion,
-		Instances:       bundleInstances(h.pages, page+1),
-		MaxPages:        h.maxPages,
-		NextPage:        page + 1,
-	})
-
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	case "/robots.txt":
+		w.Write([]byte("User-agent: *\nDisallow: /"))
+	default:
+		http.NotFound(w, r)
 	}
 }
 
