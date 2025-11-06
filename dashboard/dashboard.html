@@ -118,10 +118,15 @@
             </thead>
             <tbody>
               {{range .Instances}}
-              <tr class="border-b border-fd-border">
+              <tr class="border-b border-fd-border" id="instance-{{.UUID}}">
                 <td class="p-4 border-r border-fd-border">{{.UUID}}</td>
                 <td class="p-4 border-r border-fd-border">{{.Version}}</td>
-                <td class="p-4 border-r border-fd-border">{{.LastSeen}}</td>
+                <td
+                  class="p-4 border-r border-fd-border"
+                  id="instance-{{.UUID}}-time"
+                >
+                  {{.LastSeen}}
+                </td>
               </tr>
               {{end}}
             </tbody>
@@ -142,4 +147,17 @@
       </p>
     </footer>
   </body>
+
+  <script>
+    window.onload = function () {
+      const instances = document.querySelectorAll("tr[id^='instance-']");
+      instances.forEach((instance) => {
+        const timeCell = instance.querySelector("td[id$='-time']");
+        const timestamp = timeCell.textContent;
+        const date = new Date(Number.parseInt(timestamp));
+        const formattedDate = date.toLocaleString();
+        timeCell.textContent = formattedDate;
+      });
+    };
+  </script>
 </html>

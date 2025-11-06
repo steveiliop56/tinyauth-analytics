@@ -19,12 +19,6 @@ type instance struct {
 	LastSeen int    `json:"last_seen"`
 }
 
-type instancesFmtDate struct {
-	UUID     string
-	Version  string
-	LastSeen string
-}
-
 type instancesResponse struct {
 	Instances []instance `json:"instances"`
 	Total     int        `json:"total"`
@@ -33,7 +27,7 @@ type instancesResponse struct {
 type dashboardData struct {
 	TotalInstances  int
 	MostUsedVersion string
-	Instances       []instancesFmtDate
+	Instances       []instance
 	NextPage        int
 }
 
@@ -67,8 +61,8 @@ func getInstances(api string) (instancesResponse, error) {
 func parseInstancesToPages(instances []instance, pageSize int) [][]instance {
 	var pages [][]instance
 
-	for pageSize < len(instances) {
-		instances, pages = instances[pageSize:], append(pages, instances[0:pageSize:pageSize])
+	for len(pages) < len(instances) {
+		pages = append(pages, instances[len(pages):len(pages)+pageSize])
 	}
 
 	pages = append(pages, instances)
@@ -103,18 +97,6 @@ func bundleInstances(instances [][]instance, pages int) []instance {
 	}
 
 	return bundled
-}
-
-func formatDates(instances []instance) []instancesFmtDate {
-	var formatted []instancesFmtDate
-	for _, instance := range instances {
-		formatted = append(formatted, instancesFmtDate{
-			UUID:     instance.UUID,
-			Version:  instance.Version,
-			LastSeen: time.Unix(int64(instance.LastSeen), 0).Format(time.RFC822),
-		})
-	}
-	return formatted
 }
 
 func NewDashboardHandler(api string) *dashboardHandler {
@@ -176,7 +158,7 @@ func (h *dashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = tmpl.Execute(w, dashboardData{
 		TotalInstances:  h.totalInstances,
 		MostUsedVersion: h.mostUsedVersion,
-		Instances:       formatDates(bundleInstances(h.pages, page+1)),
+		Instances:       bundleInstances(h.pages, page+1),
 		NextPage:        page + 1,
 	})
 
