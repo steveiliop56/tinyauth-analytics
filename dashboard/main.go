@@ -65,10 +65,11 @@ func getInstances(api string) (instancesResponse, error) {
 func parseInstancesToPages(instances []instance, pageSize int) [][]instance {
 	var pages [][]instance
 
-	for len(pages) < len(instances)/pageSize {
-		pages = append(pages, instances[len(pages):len(pages)+pageSize])
+	for pageSize < len(instances) {
+		instances, pages = instances[pageSize:], append(pages, instances[0:pageSize])
 	}
 
+	pages = append(pages, instances)
 	return pages
 }
 
