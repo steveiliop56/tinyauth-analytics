@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 	"tinyauth-analytics/internal/model"
 
@@ -71,6 +72,14 @@ func (ic *InstancesController) heartbeat(c *gin.Context) {
 		c.JSON(400, gin.H{
 			"status":  400,
 			"message": "Invalid request body",
+		})
+		return
+	}
+
+	if strings.TrimSpace(heartbeat.UUID) == "" || strings.TrimSpace(heartbeat.Version) == "" {
+		c.JSON(400, gin.H{
+			"status":  400,
+			"message": "Missing required fields",
 		})
 		return
 	}
