@@ -3,17 +3,25 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
 
-const pageSize = 10
+// Variables
+var pageSize = 10
+var apiServer = "https://api.tinyauth.app"
+var version = "development"
 
 //go:embed dashboard.html
 var dashboardTemplate string
+
+//go:embed favicon.ico
+var faviconData []byte
 
 type instance struct {
 	UUID     string `json:"uuid"`
@@ -142,6 +150,7 @@ func (h *dashboardHandler) loadData() error {
 }
 
 func (h *dashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println("received request for", r.URL.Path)
 	switch r.URL.Path {
 	case "/":
 		page := 0
@@ -174,24 +183,47 @@ func (h *dashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		// No indexing for the analytics dashboard
 	case "/robots.txt":
 		w.Write([]byte("User-agent: *\nDisallow: /"))
+	case "/favicon.ico":
+		w.Header().Set("Content-Type", "image/x-icon")
+		w.Write(faviconData)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
 func main() {
+	log.Printf("tinyauth analytics dashboard version %s", version)
+
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "8080"
+	}
+
+	address := os.Getenv("ADDRESS")
+
+	if address == "" {
+		address = "0.0.0.0"
+	}
+
 	mux := http.NewServeMux()
-	dashboardHandler := NewDashboardHandler("https://api.tinyauth.app")
+
+	dashboardHandler := NewDashboardHandler(apiServer)
 	err := dashboardHandler.Init()
 	if err != nil {
 		log.Printf("failed to initialize dashboard handler: %v", err)
 		return
 	}
+
 	mux.Handle("/", dashboardHandler)
-	log.Print("starting dashboard server on :8080")
-	err = http.ListenAndServe(":8080", mux)
+
+	bind := fmt.Sprintf("%s:%s", address, port)
+
+	log.Printf("starting server on %s", bind)
+	err = http.ListenAndServe(bind, mux)
 	if err != nil {
 		log.Printf("server error: %v", err)
 	}
