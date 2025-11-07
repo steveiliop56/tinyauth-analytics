@@ -20,6 +20,20 @@ docker compose up -d
 > [!NOTE]
 > The docker compose file builds the image from scratch by default but there are also available prebuilt images in the packages section.
 
+## Configuration
+
+The server is configured using environment variables, the following options are supported:
+
+| Name                   | Type         | Description                                                | Default              |
+| ---------------------- | ------------ | ---------------------------------------------------------- | -------------------- |
+| `DB_PATH`              | string       | Path to the SQLite database file.                          | `/data/analytics.db` |
+| `PORT`                 | number       | The port to run the server on.                             | `8080`               |
+| `ADDRESS`              | string       | The address to bind the server to.                         | `0.0.0.0`            |
+| `RATE_LIMIT_COUNT`     | number       | Maximum number of requests per minute per IP.              | `3`                  |
+| `CORS_ALLOWED_ORIGINS` | string/array | Comma-separated list of allowed CORS origins.              | `*`                  |
+| `TRUSTED_PROXIES`      | string/array | Comma-separated list of trusted proxy IPs.                 | `""` (empty)         |
+| `LOG_LEVEL`            | string       | Log level (trace, debug, info, warn, error, fatal, panic). | `info`               |
+
 ## Contributing
 
 If you like you can contribute to this project by picking up an [issue](https://github.com/steveiliop56/tinyauth-analytics/issues) or creating a [pull request](https://github.com/steveiliop56/tinyauth-analytics/pulls). Contributing is appreciated a lot!
