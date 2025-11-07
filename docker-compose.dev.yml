@@ -1,0 +1,38 @@
+services:
+  tinyauth-analytics:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VERSION=development
+    environment:
+      - DATABASE_PATH=/data/analytics.db
+      - PORT=8080
+      - ADDRESS=0.0.0.0
+      - RATE_LIMIT_COUNT=15
+      - CORS_ALLOWED_ORIGINS=*
+      - TRUSTED_PROXIES=0.0.0.0
+      - LOG_LEVEL=debug
+    volumes:
+      - ./data:/data
+    ports:
+      - 8080:8080
+    restart: unless-stopped
+
+  analytics-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        - VERSION=development
+    environment:
+      - PORT=8090
+      - ADDRESS=0.0.0.0
+      - API_SERVER=http://tinyauth-analytics:8080
+      - PAGE_SIZE=10
+      - REFRESH_INTERVAL=1
+    ports:
+      - 8090:8090
+    restart: unless-stopped
+    depends_on:
+      - tinyauth-analytics

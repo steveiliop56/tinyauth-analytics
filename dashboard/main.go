@@ -9,12 +9,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // Variables
-var pageSize = 10
-var apiServer = "https://api.tinyauth.app"
 var version = "development"
 
 //go:embed dashboard.html
@@ -43,7 +42,9 @@ type dashboardData struct {
 }
 
 type dashboardHandler struct {
-	api             string
+	apiServer       string
+	pageSize        int
+	refreshInterval int
 	totalInstances  int
 	mostUsedVersion string
 	maxPages        int
@@ -111,15 +112,17 @@ func bundleInstances(instances [][]instance, pages int) []instance {
 	return bundled
 }
 
-func NewDashboardHandler(api string) *dashboardHandler {
+func NewDashboardHandler(apiServer string, pageSize int, refreshInterval int) *dashboardHandler {
 	return &dashboardHandler{
-		api: api,
+		apiServer:       apiServer,
+		pageSize:        pageSize,
+		refreshInterval: refreshInterval,
 	}
 }
 
 func (h *dashboardHandler) Init() error {
 	go func() {
-		ticker := time.NewTicker(time.Duration(24) * time.Hour)
+		ticker := time.NewTicker(time.Duration(h.refreshInterval) * time.Minute)
 		defer ticker.Stop()
 
 		for ; true; <-ticker.C {
@@ -135,16 +138,22 @@ func (h *dashboardHandler) Init() error {
 }
 
 func (h *dashboardHandler) loadData() error {
-	instancesResp, err := getInstances(h.api)
+	res, err := getInstances(h.apiServer)
 
 	if err != nil {
 		return err
 	}
 
-	h.totalInstances = instancesResp.Total
-	h.maxPages = instancesResp.Total / pageSize
-	h.pages = parseInstancesToPages(instancesResp.Instances, pageSize)
-	h.mostUsedVersion = getMostUsedVersion(instancesResp.Instances)
+	h.totalInstances = res.Total
+	h.maxPages = res.Total / h.pageSize
+	h.pages = parseInstancesToPages(res.Instances, h.pageSize)
+	h.mostUsedVersion = getMostUsedVersion(res.Instances)
+
+	if strings.TrimSpace(h.mostUsedVersion) == "" {
+		h.mostUsedVersion = "N/A"
+	}
+
+	log.Printf("loaded %d instances, most used version: %s", h.totalInstances, h.mostUsedVersion)
 
 	return nil
 }
@@ -209,9 +218,39 @@ func main() {
 		address = "0.0.0.0"
 	}
 
+	apiServer := os.Getenv("API_SERVER")
+
+	if apiServer == "" {
+		apiServer = "https://api.tinyauth.app"
+	}
+
+	pageSize := 10
+	pageSizeEnv := os.Getenv("PAGE_SIZE")
+
+	if pageSizeEnv != "" {
+		ps, err := strconv.Atoi(pageSizeEnv)
+		if err != nil {
+			log.Printf("invalid PAGE_SIZE value, using default %d: %v", pageSize, err)
+		} else {
+			pageSize = ps
+		}
+	}
+
+	refreshInterval := 30
+	refreshIntervalEnv := os.Getenv("REFRESH_INTERVAL")
+
+	if refreshIntervalEnv != "" {
+		ps, err := strconv.Atoi(refreshIntervalEnv)
+		if err != nil {
+			log.Printf("invalid REFRESH_INTERVAL value, using default %d: %v", refreshInterval, err)
+		} else {
+			refreshInterval = ps
+		}
+	}
+
 	mux := http.NewServeMux()
 
-	dashboardHandler := NewDashboardHandler(apiServer)
+	dashboardHandler := NewDashboardHandler(apiServer, pageSize, refreshInterval)
 	err := dashboardHandler.Init()
 	if err != nil {
 		log.Printf("failed to initialize dashboard handler: %v", err)

@@ -1,10 +1,6 @@
 services:
   tinyauth-analytics:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - VERSION=development
+    image: ghcr.io/steveiliop56/tinyauth-analytics:v0
     environment:
       - PORT=8080
       - ADDRESS=0.0.0.0
@@ -14,3 +10,17 @@ services:
     ports:
       - 8080:8080
     restart: unless-stopped
+
+  # Uncomment for the analytics dashboard
+  # analytics-dashboard:
+  #   image: ghcr.io/steveiliop56/tinyauth-analytics-dashboard:v0
+  #   environment:
+  #     - PORT=8090
+  #     - ADDRESS=0.0.0.0
+  #     - API_SERVER=http://tinyauth-analytics:8080
+  #     - REFRESH_INTERVAL=30
+  #   ports:
+  #     - 8090:8090
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - tinyauth-analytics
