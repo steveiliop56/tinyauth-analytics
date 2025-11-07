@@ -96,7 +96,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-dashboard-linux-amd64
+          name: dashboard-digests-linux-amd64
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -191,7 +191,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-dashboard-linux-arm64
+          name: dashboard-digests-linux-arm64
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -245,7 +245,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-dashboard*
+          pattern: dashboard-digests-*
           merge-multiple: true
 
       - name: Login to GitHub Container Registry
