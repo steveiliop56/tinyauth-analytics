@@ -50,11 +50,15 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to parse config")
 	}
 
+	warn := "no warning"
+
 	switch conf.LogLevel {
 	case "trace":
 		log.Logger = log.Level(zerolog.TraceLevel)
+		warn = "log level set to trace, this may expose sensitive information like IP addresses to the server owner"
 	case "debug":
 		log.Logger = log.Level(zerolog.DebugLevel)
+		warn = "log level set to trace, this may expose sensitive information like IP addresses to the server owner"
 	case "info":
 		log.Logger = log.Level(zerolog.InfoLevel)
 	case "warn":
@@ -99,7 +103,7 @@ func main() {
 
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db, cacheSvc, conf.RateLimitCount)
 
-	instancesCtrl := controller.NewInstancesController(api, db, rateLimitMiddleware)
+	instancesCtrl := controller.NewInstancesController(api, db, rateLimitMiddleware, warn)
 
 	instancesCtrl.SetupRoutes()
 

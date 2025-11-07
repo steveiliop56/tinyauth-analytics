@@ -24,13 +24,15 @@ type InstancesController struct {
 	database  *gorm.DB
 	router    *gin.RouterGroup
 	rateLimit RateLimit
+	warn      string
 }
 
-func NewInstancesController(router *gin.RouterGroup, database *gorm.DB, rateLimit RateLimit) *InstancesController {
+func NewInstancesController(router *gin.RouterGroup, database *gorm.DB, rateLimit RateLimit, warn string) *InstancesController {
 	return &InstancesController{
 		database:  database,
 		router:    router,
 		rateLimit: rateLimit,
+		warn:      warn,
 	}
 }
 
@@ -58,6 +60,7 @@ func (ic *InstancesController) listAllInstances(c *gin.Context) {
 		"status":    200,
 		"total":     len(instances),
 		"instances": instances,
+		"warning":   ic.warn,
 	})
 }
 
@@ -105,6 +108,7 @@ func (ic *InstancesController) heartbeat(c *gin.Context) {
 		c.JSON(201, gin.H{
 			"status":  201,
 			"message": "Instance created",
+			"warning": ic.warn,
 		})
 		return
 	}
@@ -126,5 +130,6 @@ func (ic *InstancesController) heartbeat(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status":  200,
 		"message": "Instance updated",
+		"warning": ic.warn,
 	})
 }
