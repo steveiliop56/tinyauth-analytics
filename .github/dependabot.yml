@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "bun"
+    directory: "/viewer"
+    groups:
+      minor-patch:
+        update-types:
+          - "patch"
+          - "minor"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    groups:
+      minor-patch:
+        update-types:
+          - "patch"
+          - "minor"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
