@@ -16,7 +16,7 @@ COPY ./internal ./internal
 RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" 
  
 # Runner
-FROM alpine:3.22 AS runner
+FROM alpine:3.23 AS runner
 
 WORKDIR /tinyauth-analytics
 
