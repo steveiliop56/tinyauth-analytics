@@ -11,6 +11,7 @@ import (
 	"tinyauth-analytics/database/queries"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/spf13/viper"
 	_ "modernc.org/sqlite"
 )
@@ -76,7 +77,13 @@ func main() {
 	healthHandler := NewHealthHandler()
 
 	router.Get("/v1/healthz", healthHandler.health)
-	router.Get("/v1/instances/all", instancesHandler.GetInstances)
+
+	router.Group(func(r chi.Router) {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins: config.CORSAllowedOrigins,
+		}))
+		r.Get("/v1/instances/all", instancesHandler.GetInstances)
+	})
 
 	router.Group(func(r chi.Router) {
 		r.Use(rateLimiter.limit)
