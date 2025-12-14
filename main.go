@@ -10,6 +10,7 @@ import (
 	"time"
 	"tinyauth-analytics/database/queries"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/spf13/viper"
@@ -60,8 +61,7 @@ func main() {
 	sqlDb.Exec(`PRAGMA journal_mode=WAL;`)
 
 	sqlDb.Exec(`CREATE TABLE IF NOT EXISTS "instances" (
-		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
-		"uuid" TEXT NOT NULL,
+		"uuid" TEXT NOT NULL PRIMARY KEY,
 		"version" TEXT NOT NULL,
 		"last_seen" INTEGER NOT NULL
 	);`)
@@ -69,6 +69,8 @@ func main() {
 	queries := queries.New(sqlDb)
 	cache := NewCache()
 	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 
 	rateLimiter := NewRateLimiter(RateLimitConfig{
 		RateLimitCount: config.RateLimitCount,

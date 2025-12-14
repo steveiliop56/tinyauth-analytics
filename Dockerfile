@@ -10,8 +10,12 @@ COPY go.sum ./
 
 RUN go mod download
 
+COPY ./cache.go ./
+COPY ./health_handler.go ./
+COPY ./instances_handler.go ./
 COPY ./main.go ./
-COPY ./internal ./internal
+COPY ./rate_limiter.go ./
+COPY ./database ./database
 
 RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" 
  

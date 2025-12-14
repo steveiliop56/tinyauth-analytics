@@ -19,20 +19,20 @@ services:
       - 8080:8080
     restart: unless-stopped
 
-  analytics-dashboard:
-    build:
-      context: ./dashboard
-      dockerfile: Dockerfile
-      args:
-        - VERSION=development
-    environment:
-      - PORT=8090
-      - ADDRESS=0.0.0.0
-      - API_SERVER=http://tinyauth-analytics:8080
-      - PAGE_SIZE=10
-      - REFRESH_INTERVAL=1
-    ports:
-      - 8090:8090
-    restart: unless-stopped
-    depends_on:
-      - tinyauth-analytics
+  # analytics-dashboard:
+  #   build:
+  #     context: ./dashboard
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - VERSION=development
+  #   environment:
+  #     - PORT=8090
+  #     - ADDRESS=0.0.0.0
+  #     - API_SERVER=http://tinyauth-analytics:8080
+  #     - PAGE_SIZE=10
+  #     - REFRESH_INTERVAL=1
+  #   ports:
+  #     - 8090:8090
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - tinyauth-analytics
