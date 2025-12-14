@@ -3,3 +3,6 @@ data/analytics.db
 
 # debug
 __debug_*
+
+# bench
+bench
