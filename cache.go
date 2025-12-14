@@ -43,16 +43,18 @@ func (c *Cache) Set(key string, value any, ttl int64) {
 
 func (c *Cache) Get(key string) (any, bool) {
 	c.mutex.RLock()
-	defer c.mutex.RUnlock()
 	for _, field := range c.cache {
 		if field.key == key {
 			if time.Now().Unix() > field.expire {
+				c.mutex.RUnlock()
 				c.Delete(key)
 				return nil, false
 			}
+			c.mutex.RUnlock()
 			return field.value, true
 		}
 	}
+	c.mutex.RUnlock()
 	return nil, false
 }
 

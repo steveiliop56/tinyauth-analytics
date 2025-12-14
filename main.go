@@ -57,6 +57,8 @@ func main() {
 
 	defer sqlDb.Close()
 
+	sqlDb.Exec(`PRAGMA journal_mode=WAL;`)
+
 	sqlDb.Exec(`CREATE TABLE IF NOT EXISTS "instances" (
 		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		"uuid" TEXT NOT NULL,

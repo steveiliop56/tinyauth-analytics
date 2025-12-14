@@ -5,7 +5,6 @@
 package queries
 
 type Instance struct {
-	ID       int64 `json:"-"`
 	UUID     string
 	Version  string
 	LastSeen int64

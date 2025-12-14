@@ -45,7 +45,7 @@ func (rl *RateLimiter) limit(next http.Handler) http.Handler {
 		w.Header().Set("x-ratelimit-reset", fmt.Sprint(time.Now().Add(24*time.Hour).Unix()))
 
 		if !exists {
-			rl.cache.Set(clientIP, 1, 86400) // 1 day TTL
+			rl.cache.Set(clientIP, 1, 43200) // 12 hours TTL
 			w.Header().Set("x-ratelimit-remaining", fmt.Sprint(rl.config.RateLimitCount-1))
 			w.Header().Set("x-ratelimit-used", fmt.Sprint(1))
 			next.ServeHTTP(w, r)
@@ -61,7 +61,7 @@ func (rl *RateLimiter) limit(next http.Handler) http.Handler {
 			return
 		}
 
-		rl.cache.Set(clientIP, used, 86400) // 1 day TTL
+		rl.cache.Set(clientIP, used, 43200) // 12 hours TTL
 
 		w.Header().Set("x-ratelimit-remaining", fmt.Sprint(rl.config.RateLimitCount-used))
 		w.Header().Set("x-ratelimit-used", fmt.Sprint(used))

@@ -6,3 +6,6 @@ __debug_*
 
 # build out
 tinyauth-analytics
+
+# benchmarks
+bench

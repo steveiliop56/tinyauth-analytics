@@ -41,7 +41,7 @@ func (q *Queries) DeleteInstance(ctx context.Context, uuid string) error {
 const deleteOldInstances = `-- name: DeleteOldInstances :many
 DELETE FROM instances
 WHERE last_seen < ?
-RETURNING id, uuid, version, last_seen
+RETURNING uuid, version, last_seen
 `
 
 func (q *Queries) DeleteOldInstances(ctx context.Context, lastSeen int64) ([]Instance, error) {
@@ -53,12 +53,7 @@ func (q *Queries) DeleteOldInstances(ctx context.Context, lastSeen int64) ([]Ins
 	var items []Instance
 	for rows.Next() {
 		var i Instance
-		if err := rows.Scan(
-			&i.ID,
-			&i.UUID,
-			&i.Version,
-			&i.LastSeen,
-		); err != nil {
+		if err := rows.Scan(&i.UUID, &i.Version, &i.LastSeen); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -73,7 +68,7 @@ func (q *Queries) DeleteOldInstances(ctx context.Context, lastSeen int64) ([]Ins
 }
 
 const getAllInstances = `-- name: GetAllInstances :many
-SELECT id, uuid, version, last_seen FROM instances
+SELECT uuid, version, last_seen FROM instances
 `
 
 func (q *Queries) GetAllInstances(ctx context.Context) ([]Instance, error) {
@@ -85,12 +80,7 @@ func (q *Queries) GetAllInstances(ctx context.Context) ([]Instance, error) {
 	var items []Instance
 	for rows.Next() {
 		var i Instance
-		if err := rows.Scan(
-			&i.ID,
-			&i.UUID,
-			&i.Version,
-			&i.LastSeen,
-		); err != nil {
+		if err := rows.Scan(&i.UUID, &i.Version, &i.LastSeen); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -105,19 +95,14 @@ func (q *Queries) GetAllInstances(ctx context.Context) ([]Instance, error) {
 }
 
 const getInstance = `-- name: GetInstance :one
-SELECT id, uuid, version, last_seen FROM instances
+SELECT uuid, version, last_seen FROM instances
 WHERE uuid = ? LIMIT 1
 `
 
 func (q *Queries) GetInstance(ctx context.Context, uuid string) (Instance, error) {
 	row := q.db.QueryRowContext(ctx, getInstance, uuid)
 	var i Instance
-	err := row.Scan(
-		&i.ID,
-		&i.UUID,
-		&i.Version,
-		&i.LastSeen,
-	)
+	err := row.Scan(&i.UUID, &i.Version, &i.LastSeen)
 	return i, err
 }
 
