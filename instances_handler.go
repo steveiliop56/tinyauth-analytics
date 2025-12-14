@@ -1,6 +1,9 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 	"tinyauth-analytics/database/queries"
@@ -22,6 +25,7 @@ func (h *InstancesHandler) GetInstances(w http.ResponseWriter, r *http.Request) 
 	instances, err := h.queries.GetAllInstances(r.Context())
 
 	if err != nil {
+		slog.Error("failed to get instances", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		render.JSON(w, r, map[string]string{
 			"status":  "500",
@@ -57,13 +61,24 @@ func (h *InstancesHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.queries.GetInstance(r.Context(), heartbeat.UUID)
 
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		slog.Error("failed to get instance", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		render.JSON(w, r, map[string]string{
+			"status":  "500",
+			"message": "Failed to retrieve instance",
+		})
+		return
+	}
+
+	if err != nil && errors.Is(err, sql.ErrNoRows) {
 		err = h.queries.CreateInstance(r.Context(), queries.CreateInstanceParams{
 			UUID:     heartbeat.UUID,
 			Version:  heartbeat.Version,
 			LastSeen: time.Now().UnixMilli(),
 		})
 		if err != nil {
+			slog.Error("failed to create instance", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, map[string]string{
 				"status":  "500",
@@ -71,9 +86,9 @@ func (h *InstancesHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusCreated)
 		render.JSON(w, r, map[string]string{
-			"status":  "200",
+			"status":  "201",
 			"message": "Instance created",
 		})
 		return

@@ -68,16 +68,18 @@ func (c *Cache) Flush() {
 }
 
 func (c *Cache) cleanup() {
-	ticker := time.NewTicker(24 * time.Hour)
-	defer ticker.Stop()
-
 	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
 		for range ticker.C {
+			c.mutex.Lock()
 			for key, field := range c.cache {
 				if time.Now().Unix() > field.expire {
-					c.Delete(key)
+					delete(c.cache, key)
 				}
 			}
+			c.mutex.Unlock()
 		}
 	}()
 }

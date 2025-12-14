@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"slices"
@@ -42,7 +43,7 @@ func (rl *RateLimiter) limit(next http.Handler) http.Handler {
 		value, exists := rl.cache.Get(clientIP)
 
 		w.Header().Set("x-ratelimit-limit", fmt.Sprint(rl.config.RateLimitCount))
-		w.Header().Set("x-ratelimit-reset", fmt.Sprint(time.Now().Add(24*time.Hour).Unix()))
+		w.Header().Set("x-ratelimit-reset", fmt.Sprint(time.Now().Add(12*time.Hour).Unix()))
 
 		if !exists {
 			rl.cache.Set(clientIP, 1, 43200) // 12 hours TTL
@@ -52,7 +53,15 @@ func (rl *RateLimiter) limit(next http.Handler) http.Handler {
 			return
 		}
 
-		used := value.(int) + 1
+		used, ok := value.(int)
+
+		if !ok {
+			slog.Error("failed to assert rate limit cache value type")
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		used++
 
 		if used > rl.config.RateLimitCount {
 			w.Header().Set("x-ratelimit-remaining", fmt.Sprint(0))
