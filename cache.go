@@ -1,74 +1,83 @@
 package main
 
 import (
-	"slices"
 	"sync"
 	"time"
 )
 
 type cacheField struct {
-	key    string
 	value  any
 	expire int64
 }
 
 type Cache struct {
-	cache []cacheField
+	cache map[string]cacheField
 	mutex sync.RWMutex
 }
 
 func NewCache() *Cache {
-	return &Cache{
-		cache: make([]cacheField, 0),
+	cache := &Cache{
+		cache: make(map[string]cacheField),
 	}
+	cache.cleanup()
+	return cache
 }
 
 func (c *Cache) Set(key string, value any, ttl int64) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
 	expire := time.Now().Add(time.Duration(ttl) * time.Second).Unix()
-	for i, field := range c.cache {
-		if field.key == key {
-			c.cache[i].value = value
-			c.cache[i].expire = expire
-			return
-		}
-	}
-	c.cache = append(c.cache, cacheField{
-		key:    key,
+
+	c.cache[key] = cacheField{
 		value:  value,
 		expire: expire,
-	})
+	}
 }
 
 func (c *Cache) Get(key string) (any, bool) {
 	c.mutex.RLock()
-	for _, field := range c.cache {
-		if field.key == key {
-			if time.Now().Unix() > field.expire {
-				c.mutex.RUnlock()
-				c.Delete(key)
-				return nil, false
-			}
-			c.mutex.RUnlock()
-			return field.value, true
-		}
+
+	field, ok := c.cache[key]
+
+	if !ok {
+		c.mutex.RUnlock()
+		return nil, false
 	}
+
+	if time.Now().Unix() > field.expire {
+		c.mutex.RUnlock()
+		c.Delete(key)
+		return nil, false
+	}
+
 	c.mutex.RUnlock()
-	return nil, false
+	return field.value, true
 }
 
 func (c *Cache) Delete(key string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	for i, field := range c.cache {
-		if field.key == key {
-			c.cache = slices.Delete(c.cache, i, i+1)
-			return
-		}
-	}
+	delete(c.cache, key)
 }
 
 func (c *Cache) Flush() {
-	c.cache = make([]cacheField, 0)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.cache = make(map[string]cacheField, 0)
+}
+
+func (c *Cache) cleanup() {
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+
+	go func() {
+		for range ticker.C {
+			for key, field := range c.cache {
+				if time.Now().Unix() > field.expire {
+					c.Delete(key)
+				}
+			}
+		}
+	}()
 }
