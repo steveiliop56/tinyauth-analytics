@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS "instances" (
+	"uuid" TEXT NOT NULL PRIMARY KEY,
+	"version" TEXT NOT NULL,
+	"last_seen" INTEGER NOT NULL
+);

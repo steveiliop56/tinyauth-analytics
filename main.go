@@ -2,140 +2,131 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"time"
-	"tinyauth-analytics/internal/controller"
-	"tinyauth-analytics/internal/middleware"
-	"tinyauth-analytics/internal/model"
-	"tinyauth-analytics/internal/service"
+	"tinyauth-analytics/database/queries"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/spf13/viper"
-	"gorm.io/gorm"
+	_ "modernc.org/sqlite"
 )
 
-var version = "development"
-
-type config struct {
-	DatabasePath       string   `mapstructure:"db_path"`
-	Port               string   `mapstructure:"port"`
+type Config struct {
+	Port               int      `mapstructure:"port"`
 	Address            string   `mapstructure:"address"`
 	RateLimitCount     int      `mapstructure:"rate_limit_count"`
-	CORSAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
+	DatabasePath       string   `mapstructure:"database_path"`
 	TrustedProxies     []string `mapstructure:"trusted_proxies"`
-	LogLevel           string   `mapstructure:"log_level"`
+	CORSAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
 }
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).With().Timestamp().Caller().Logger()
-
 	v := viper.New()
+
+	v.SetDefault("port", 8080)
+	v.SetDefault("address", "0.0.0.0")
+	v.SetDefault("rate_limit_count", 3)
+	v.SetDefault("database_path", "analytics.db")
+	v.SetDefault("trusted_proxies", []string{""})
+	v.SetDefault("cors_allowed_origins", []string{"*"})
 
 	v.AutomaticEnv()
 
-	v.SetDefault("db_path", "/data/analytics.db")
-	v.SetDefault("port", "8080")
-	v.SetDefault("address", "0.0.0.0")
-	v.SetDefault("rate_limit_count", 3)
-	v.SetDefault("cors_allowed_origins", "*")
-	v.SetDefault("trusted_proxies", "")
-	v.SetDefault("log_level", "info")
+	var config Config
 
-	var conf config
+	err := v.Unmarshal(&config)
 
-	if err := v.Unmarshal(&conf); err != nil {
-		log.Fatal().Err(err).Msg("failed to parse config")
+	if err != nil {
+		slog.Error("failed to parse configuration: ", "error", err)
+		os.Exit(1)
 	}
 
-	warn := "no warning"
+	slog.Info("starting tinyauth analytics", "config", config)
 
-	switch conf.LogLevel {
-	case "trace":
-		log.Logger = log.Level(zerolog.TraceLevel)
-		warn = "log level set to trace, this may expose sensitive information like IP addresses to the server owner"
-	case "debug":
-		log.Logger = log.Level(zerolog.DebugLevel)
-		warn = "log level set to trace, this may expose sensitive information like IP addresses to the server owner"
-	case "info":
-		log.Logger = log.Level(zerolog.InfoLevel)
-	case "warn":
-		log.Logger = log.Level(zerolog.WarnLevel)
-	case "error":
-		log.Logger = log.Level(zerolog.ErrorLevel)
-	case "fatal":
-		log.Logger = log.Level(zerolog.FatalLevel)
-	case "panic":
-		log.Logger = log.Level(zerolog.PanicLevel)
-	default:
-		log.Fatal().Str("level", conf.LogLevel).Msg("invalid log level")
+	sqlDb, err := sql.Open("sqlite", config.DatabasePath)
+
+	if err != nil {
+		slog.Error("failed to open database: ", "error", err)
+		os.Exit(1)
 	}
 
-	dbSvc := service.NewDatabaseService(service.DatabaseServiceConfig{
-		DatabasePath: conf.DatabasePath,
+	defer sqlDb.Close()
+
+	sqlDb.Exec(`PRAGMA journal_mode=WAL;`)
+
+	sqlDb.Exec(`CREATE TABLE IF NOT EXISTS "instances" (
+		"uuid" TEXT NOT NULL PRIMARY KEY,
+		"version" TEXT NOT NULL,
+		"last_seen" INTEGER NOT NULL
+	);`)
+
+	queries := queries.New(sqlDb)
+	cache := NewCache()
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+
+	rateLimiter := NewRateLimiter(RateLimitConfig{
+		RateLimitCount: config.RateLimitCount,
+		TrustedProxies: config.TrustedProxies,
+	}, cache)
+
+	instancesHandler := NewInstancesHandler(queries)
+	healthHandler := NewHealthHandler()
+
+	router.Get("/v1/healthz", healthHandler.health)
+
+	router.Group(func(r chi.Router) {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins: config.CORSAllowedOrigins,
+		}))
+		r.Get("/v1/instances/all", instancesHandler.GetInstances)
 	})
 
-	if err := dbSvc.Init(); err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize database")
+	router.Group(func(r chi.Router) {
+		r.Use(rateLimiter.limit)
+		r.Post("/v1/instances/heartbeat", instancesHandler.Heartbeat)
+	})
+
+	srv := &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", config.Address, config.Port),
+		Handler: router,
 	}
 
-	db := dbSvc.GetDatabase()
+	go cleanUpOldInstances(queries)
 
-	cacheSvc := service.NewCacheService()
+	slog.Info("server listening", "address", srv.Addr)
 
-	zerologMiddleware := middleware.NewZerologMiddleware(log.Logger.GetLevel())
+	err = srv.ListenAndServe()
 
-	engine := gin.New()
-	engine.Use(gin.Recovery())
-	engine.Use(zerologMiddleware.Middleware())
-
-	engine.Use(cors.New(
-		cors.Config{
-			AllowOrigins: conf.CORSAllowedOrigins,
-		},
-	))
-
-	engine.SetTrustedProxies(conf.TrustedProxies)
-
-	api := engine.Group("/v1")
-
-	rateLimitMiddleware := middleware.NewRateLimitMiddleware(db, cacheSvc, conf.RateLimitCount)
-
-	instancesCtrl := controller.NewInstancesController(api, db, rateLimitMiddleware, warn)
-
-	instancesCtrl.SetupRoutes()
-
-	healthCtrl := controller.NewHealthController(api)
-
-	healthCtrl.SetupRoutes()
-
-	go clearOldSessions(db)
-
-	log.Info().Str("port", conf.Port).Str("address", conf.Address).Msg("starting server, version " + version)
-
-	if err := engine.Run(conf.Address + ":" + conf.Port); err != nil {
-		log.Fatal().Err(err).Msg("server error")
+	if err != nil {
+		slog.Error("server error: ", "error", err)
+		os.Exit(1)
 	}
 }
 
-func clearOldSessions(db *gorm.DB) {
-	ticker := time.NewTicker(time.Duration(24) * time.Hour)
+func cleanUpOldInstances(queries *queries.Queries) {
+	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
-		log.Info().Msg("clearing old sessions")
+		slog.Info("cleaning up old instances")
 
-		ctx := context.Background()
-		cutoffTime := time.Now().Add(time.Duration(-48) * time.Hour).UnixMilli()
-		rowsAffected, err := gorm.G[model.Instance](db).Where("last_seen < ?", cutoffTime).Delete(ctx)
+		cutoffTime := time.Now().Add(-48 * time.Hour).UnixMilli()
+		rowsAffected, err := queries.DeleteOldInstances(context.Background(), cutoffTime)
 
 		if err != nil {
-			log.Warn().Err(err).Msg("failed to clear old sessions")
+			slog.Error("failed to clean up old instances: ", "error", err)
 			continue
 		}
 
-		log.Info().Msgf("cleared %d old sessions", rowsAffected)
+		slog.Info("old instances cleaned up", "rows_affected", rowsAffected)
 	}
+
 }

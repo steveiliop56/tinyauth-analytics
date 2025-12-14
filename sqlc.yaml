@@ -1,0 +1,14 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "query.sql"
+    schema: "schema.sql"
+    gen:
+      go:
+        package: "queries"
+        out: "database/queries"
+        overrides:
+          - column: "instances.id"
+            go_struct_tag: json:"-"
+        rename:
+          uuid: "UUID"
