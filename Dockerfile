@@ -32,15 +32,13 @@ RUN adduser -u 1000 -H -D tinyauth-analytics
 
 RUN chown tinyauth-analytics /data
 
-ENV DB_PATH=/data/analytics.db
+ENV DATABASE_PATH=/data/analytics.db
 
 EXPOSE 8080
 
 VOLUME ["/data"]
 
 USER tinyauth-analytics
-
-ENV GIN_MODE=release
 
 ENV PATH=$PATH:/tinyauth-analytics
 
