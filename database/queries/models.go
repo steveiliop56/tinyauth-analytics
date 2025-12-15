@@ -5,7 +5,7 @@
 package queries
 
 type Instance struct {
-	UUID     string
-	Version  string
-	LastSeen int64
+	UUID     string `json:"uuid"`
+	Version  string `json:"version"`
+	LastSeen int64  `json:"last_seen"`
 }

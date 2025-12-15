@@ -8,7 +8,11 @@ sql:
         package: "queries"
         out: "database/queries"
         overrides:
-          - column: "instances.id"
-            go_struct_tag: json:"-"
+          - column: "instances.uuid"
+            go_struct_tag: json:"uuid"
+          - column: "instances.last_seen"
+            go_struct_tag: json:"last_seen"
+          - column: "instances.version"
+            go_struct_tag: json:"version"
         rename:
           uuid: "UUID"
