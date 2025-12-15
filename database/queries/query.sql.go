@@ -18,9 +18,9 @@ INSERT INTO instances (
 `
 
 type CreateInstanceParams struct {
-	UUID     string
-	Version  string
-	LastSeen int64
+	UUID     string `json:"uuid"`
+	Version  string `json:"version"`
+	LastSeen int64  `json:"last_seen"`
 }
 
 func (q *Queries) CreateInstance(ctx context.Context, arg CreateInstanceParams) error {
@@ -113,8 +113,8 @@ WHERE uuid = ?
 `
 
 type UpdateInstanceParams struct {
-	LastSeen int64
-	UUID     string
+	LastSeen int64  `json:"last_seen"`
+	UUID     string `json:"uuid"`
 }
 
 func (q *Queries) UpdateInstance(ctx context.Context, arg UpdateInstanceParams) error {
