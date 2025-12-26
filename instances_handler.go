@@ -6,7 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-	"tinyauth-analytics/database/queries"
+
+	"github.com/steveiliop56/tinyauth-analytics/database/queries"
 
 	"github.com/go-chi/render"
 )
