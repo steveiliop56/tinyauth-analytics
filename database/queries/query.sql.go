@@ -40,7 +40,7 @@ func (q *Queries) DeleteInstance(ctx context.Context, uuid string) error {
 
 const deleteOldInstances = `-- name: DeleteOldInstances :many
 DELETE FROM instances
-WHERE last_seen < ?
+WHERE last_seen < ? OR version = '' OR uuid = ''
 RETURNING uuid, version, last_seen
 `
 

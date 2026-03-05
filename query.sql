@@ -23,5 +23,5 @@ WHERE uuid = ?;
 
 -- name: DeleteOldInstances :many
 DELETE FROM instances
-WHERE last_seen < ?
+WHERE last_seen < ? OR version = '' OR uuid = ''
 RETURNING *;

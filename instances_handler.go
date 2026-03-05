@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/steveiliop56/tinyauth-analytics/database/queries"
@@ -52,6 +53,15 @@ func (h *InstancesHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 	err := render.DecodeJSON(r.Body, &heartbeat)
 
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{
+			"status":  "400",
+			"message": "Invalid request payload",
+		})
+		return
+	}
+
+	if strings.TrimSpace(heartbeat.UUID) == "" || strings.TrimSpace(heartbeat.Version) == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, map[string]string{
 			"status":  "400",

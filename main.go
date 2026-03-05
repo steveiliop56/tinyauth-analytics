@@ -116,7 +116,7 @@ func cleanUpOldInstances(queries *queries.Queries) {
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 
-	for ; true; <-ticker.C {
+	for range ticker.C {
 		slog.Info("cleaning up old instances")
 
 		cutoffTime := time.Now().Add(-48 * time.Hour).UnixMilli()
