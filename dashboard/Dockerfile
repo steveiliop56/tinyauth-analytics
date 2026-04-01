@@ -3,7 +3,7 @@ FROM golang:1.25-alpine3.21 AS builder
 
 ARG VERSION
 
-WORKDIR /analytics-dashboard
+WORKDIR /dashboard
 
 COPY go.mod ./
 
@@ -13,21 +13,21 @@ COPY ./main.go ./
 COPY ./dashboard.html ./
 COPY ./favicon.ico ./
 
-RUN CGO_ENABLED=0 go build -o analytics-dashboard -ldflags "-s -w -X main.version=${VERSION}" 
- 
+RUN CGO_ENABLED=0 go build -o dashboard -ldflags "-s -w -X main.version=${VERSION}"
+
 # Runner
 FROM alpine:3.22 AS runner
 
-WORKDIR /analytics-dashboard
+WORKDIR /dashboard
 
-COPY --from=builder /analytics-dashboard/analytics-dashboard ./
+COPY --from=builder /dashboard/dashboard ./
 
-RUN adduser -u 1000 -H -D analytics-dashboard
+RUN adduser -u 1000 -H -D dashboard
 
 EXPOSE 8080
 
-USER analytics-dashboard
+USER dashboard
 
-ENV PATH=$PATH:/analytics-dashboard
+ENV PATH=$PATH:/dashboard
 
-ENTRYPOINT ["analytics-dashboard"]
+ENTRYPOINT ["dashboard"]
