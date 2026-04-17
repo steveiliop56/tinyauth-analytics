@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/steveiliop56/tinyauth-analytics/database/queries"
+	"github.com/tinyauthapp/analytics/database/queries"
 
 	"github.com/go-chi/render"
 )

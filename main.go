@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/steveiliop56/tinyauth-analytics/database/queries"
+	"github.com/tinyauthapp/analytics/database/queries"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

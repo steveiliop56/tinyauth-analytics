@@ -29,7 +29,7 @@ The server is configured using environment variables, the following options are 
 
 ## Contributing
 
-If you like you can contribute to this project by picking up an [issue](https://github.com/steveiliop56/tinyauth-analytics/issues) or creating a [pull request](https://github.com/steveiliop56/tinyauth-analytics/pulls). Contributing is appreciated a lot!
+If you like you can contribute to this project by picking up an [issue](https://github.com/tinyauthapp/analytics/issues) or creating a [pull request](https://github.com/tinyauthapp/analytics/pulls). Contributing is appreciated a lot!
 
 ## License
 

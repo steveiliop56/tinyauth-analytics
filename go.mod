@@ -1,4 +1,4 @@
-module github.com/steveiliop56/tinyauth-analytics
+module github.com/tinyauthapp/analytics
 
 go 1.25.0
 
