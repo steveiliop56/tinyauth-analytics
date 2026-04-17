@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/tinyauthapp/analytics/database/queries"
+	"github.com/tinyauthapp/analytics/queries"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -80,8 +80,9 @@ func main() {
 
 	instancesHandler := NewInstancesHandler(queries)
 	healthHandler := NewHealthHandler()
+	dashboardHandler := NewDashboardHandler(queries)
 
-	router.Get("/v1/healthz", healthHandler.health)
+	router.Get("/v1/healthz", healthHandler.Health)
 
 	router.Group(func(r chi.Router) {
 		r.Use(cors.Handler(cors.Options{
@@ -94,6 +95,10 @@ func main() {
 		r.Use(rateLimiter.limit)
 		r.Post("/v1/instances/heartbeat", instancesHandler.Heartbeat)
 	})
+
+	router.Get("/dashboard", dashboardHandler.Dashboard)
+	router.Get("/favicon.txt", dashboardHandler.Favicon)
+	router.Get("/robots.txt", dashboardHandler.Robots)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", config.Address, config.Port),

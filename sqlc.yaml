@@ -1,12 +1,12 @@
 version: "2"
 sql:
   - engine: "sqlite"
-    queries: "query.sql"
+    queries: "queries.sql"
     schema: "schema.sql"
     gen:
       go:
         package: "queries"
-        out: "database/queries"
+        out: "queries"
         overrides:
           - column: "instances.uuid"
             go_struct_tag: json:"uuid"

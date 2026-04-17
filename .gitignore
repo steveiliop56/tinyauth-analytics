@@ -1,11 +1,8 @@
-# data
-data
-
 # debug
 __debug_*
 
 # build out
-tinyauth-analytics
+/analytics
 
-# benchmarks
-bench
+# data
+/analytics.db*
