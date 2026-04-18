@@ -18,6 +18,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+var version = "development"
+
 type Config struct {
 	Port               int      `mapstructure:"port"`
 	Address            string   `mapstructure:"address"`
@@ -50,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("starting tinyauth analytics", "config", config)
+	slog.Info("starting tinyauth analytics", "version", version, "config", config)
 
 	sqlDb, err := sql.Open("sqlite", config.DatabasePath)
 

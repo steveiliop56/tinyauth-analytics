@@ -42,7 +42,7 @@ func (h *DashboardHandler) compileVersionStats(instances []queries.Instance) ver
 		total++
 	}
 
-	mostUsed := ""
+	mostUsed := "unkown"
 	maxCount := 0
 
 	versionLabels := make([]string, 0, len(stats))
