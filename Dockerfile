@@ -10,6 +10,7 @@ COPY go.sum ./
 
 RUN go mod download
 
+COPY ./badge_handler.go ./
 COPY ./cache.go ./
 COPY ./dashboard.html ./
 COPY ./dashboard_handler.go ./
