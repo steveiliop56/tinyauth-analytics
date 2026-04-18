@@ -25,6 +25,7 @@ type Config struct {
 	DatabasePath       string   `mapstructure:"database_path"`
 	TrustedProxies     []string `mapstructure:"trusted_proxies"`
 	CORSAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
+	DashboardEnabled   bool     `mapstructure:"dashboard_enabled"`
 }
 
 func main() {
@@ -36,6 +37,7 @@ func main() {
 	v.SetDefault("database_path", "analytics.db")
 	v.SetDefault("trusted_proxies", []string{""})
 	v.SetDefault("cors_allowed_origins", []string{"*"})
+	v.SetDefault("dashboard_enabled", true)
 
 	v.AutomaticEnv()
 
@@ -96,7 +98,10 @@ func main() {
 		r.Post("/v1/instances/heartbeat", instancesHandler.Heartbeat)
 	})
 
-	router.Get("/dashboard", dashboardHandler.Dashboard)
+	if config.DashboardEnabled {
+		router.Get("/dashboard", dashboardHandler.Dashboard)
+	}
+
 	router.Get("/favicon.txt", dashboardHandler.Favicon)
 	router.Get("/robots.txt", dashboardHandler.Robots)
 

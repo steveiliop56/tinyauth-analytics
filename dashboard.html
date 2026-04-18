@@ -43,13 +43,9 @@
             .stat-card:hover {
                 border-color: var(--color-fd-blue);
                 transform: translateY(-2px);
-                background-color: #1a1a1a;
             }
             .stat-value {
                 transition: color 0.2s ease;
-            }
-            .stat-card:hover .stat-value {
-                color: var(--color-fd-blue);
             }
             .chart-wrapper {
                 position: relative;
@@ -129,7 +125,9 @@
                     </div>
                 </div>
             </div>
-            <div class="chart-wrapper border border-fd-border rounded-md p-4">
+            <div
+                class="chart-wrapper stat-card border border-fd-border rounded-md p-4"
+            >
                 <canvas id="versionChart"></canvas>
             </div>
         </main>
