@@ -27,6 +27,7 @@ The server is configured using environment variables, the following options are 
 | `CORS_ALLOWED_ORIGINS` | string/array | Comma-separated list of allowed CORS origins. | `*`                  |
 | `TRUSTED_PROXIES`      | string/array | Comma-separated list of trusted proxy IPs.    | ``                   |
 | `DASHBOARD_ENABLED`     | boolean      | Whether to enable the dashboard.              | `true`               |
+| `BADGE_ENABLED`         | boolean      | Whether to enable the badge endpoint.         | `true`               |
 
 ## Contributing
 
