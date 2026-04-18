@@ -16,7 +16,12 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/spf13/viper"
 	_ "modernc.org/sqlite"
+
+	_ "embed"
 )
+
+//go:embed favicon.ico
+var faviconData []byte
 
 var version = "development"
 
@@ -28,6 +33,7 @@ type Config struct {
 	TrustedProxies     []string `mapstructure:"trusted_proxies"`
 	CORSAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
 	DashboardEnabled   bool     `mapstructure:"dashboard_enabled"`
+	BadgeEnabled       bool     `mapstructure:"badge_enabled"`
 }
 
 func main() {
@@ -40,6 +46,7 @@ func main() {
 	v.SetDefault("trusted_proxies", []string{""})
 	v.SetDefault("cors_allowed_origins", []string{"*"})
 	v.SetDefault("dashboard_enabled", true)
+	v.SetDefault("badge_enabled", true)
 
 	v.AutomaticEnv()
 
@@ -84,7 +91,6 @@ func main() {
 
 	instancesHandler := NewInstancesHandler(queries)
 	healthHandler := NewHealthHandler()
-	dashboardHandler := NewDashboardHandler(queries)
 
 	router.Get("/v1/healthz", healthHandler.Health)
 
@@ -100,12 +106,27 @@ func main() {
 		r.Post("/v1/instances/heartbeat", instancesHandler.Heartbeat)
 	})
 
+	router.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("User-agent: *\nDisallow: /"))
+	})
+
 	if config.DashboardEnabled {
+		dashboardHandler := NewDashboardHandler(queries)
 		router.Get("/dashboard", dashboardHandler.Dashboard)
+		router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "image/x-icon")
+			w.WriteHeader(http.StatusOK)
+			w.Write(faviconData)
+		})
+
 	}
 
-	router.Get("/favicon.ico", dashboardHandler.Favicon)
-	router.Get("/robots.txt", dashboardHandler.Robots)
+	if config.BadgeEnabled {
+		badgeHandler := NewBadgeHandler(queries)
+		router.Get("/v1/badge", badgeHandler.Badge)
+	}
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", config.Address, config.Port),
