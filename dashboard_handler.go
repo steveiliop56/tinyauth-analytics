@@ -12,9 +12,6 @@ import (
 //go:embed dashboard.html
 var dashboardTemplate string
 
-//go:embed favicon.ico
-var faviconData []byte
-
 type DashboardHandler struct {
 	queries *queries.Queries
 }
@@ -87,16 +84,4 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-}
-
-func (h *DashboardHandler) Favicon(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "image/x-icon")
-	w.WriteHeader(http.StatusOK)
-	w.Write(faviconData)
-}
-
-func (h *DashboardHandler) Robots(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("User-agent: *\nDisallow: /"))
 }

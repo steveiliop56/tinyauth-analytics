@@ -25,3 +25,6 @@ WHERE uuid = ?;
 DELETE FROM instances
 WHERE last_seen < ? OR version = '' OR uuid = ''
 RETURNING *;
+
+-- name: GetInstanceCount :one
+SELECT COUNT(*) AS count FROM instances;

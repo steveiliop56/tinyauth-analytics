@@ -106,6 +106,17 @@ func (q *Queries) GetInstance(ctx context.Context, uuid string) (Instance, error
 	return i, err
 }
 
+const getInstanceCount = `-- name: GetInstanceCount :one
+SELECT COUNT(*) AS count FROM instances
+`
+
+func (q *Queries) GetInstanceCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getInstanceCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const updateInstance = `-- name: UpdateInstance :exec
 UPDATE instances
 set last_seen = ?
