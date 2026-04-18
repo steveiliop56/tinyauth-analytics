@@ -2,7 +2,6 @@ package main
 
 import (
 	_ "embed"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -42,7 +41,7 @@ func (h *DashboardHandler) compileVersionStats(instances []queries.Instance) ver
 		total++
 	}
 
-	mostUsed := "unkown"
+	mostUsed := "unknown"
 	maxCount := 0
 
 	versionLabels := make([]string, 0, len(stats))
@@ -75,8 +74,6 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	versionStats := h.compileVersionStats(instances)
-
-	fmt.Println(versionStats)
 
 	tmpl, err := template.New("dashboard").Parse(dashboardTemplate)
 	if err != nil {

@@ -104,7 +104,7 @@ func main() {
 		router.Get("/dashboard", dashboardHandler.Dashboard)
 	}
 
-	router.Get("/favicon.txt", dashboardHandler.Favicon)
+	router.Get("/favicon.ico", dashboardHandler.Favicon)
 	router.Get("/robots.txt", dashboardHandler.Robots)
 
 	srv := &http.Server{
