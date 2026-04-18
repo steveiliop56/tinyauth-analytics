@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/tinyauthapp/analytics/database/queries"
+	"github.com/tinyauthapp/analytics/queries"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -18,6 +18,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+var version = "development"
+
 type Config struct {
 	Port               int      `mapstructure:"port"`
 	Address            string   `mapstructure:"address"`
@@ -25,6 +27,7 @@ type Config struct {
 	DatabasePath       string   `mapstructure:"database_path"`
 	TrustedProxies     []string `mapstructure:"trusted_proxies"`
 	CORSAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
+	DashboardEnabled   bool     `mapstructure:"dashboard_enabled"`
 }
 
 func main() {
@@ -36,6 +39,7 @@ func main() {
 	v.SetDefault("database_path", "analytics.db")
 	v.SetDefault("trusted_proxies", []string{""})
 	v.SetDefault("cors_allowed_origins", []string{"*"})
+	v.SetDefault("dashboard_enabled", true)
 
 	v.AutomaticEnv()
 
@@ -48,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("starting tinyauth analytics", "config", config)
+	slog.Info("starting tinyauth analytics", "version", version, "config", config)
 
 	sqlDb, err := sql.Open("sqlite", config.DatabasePath)
 
@@ -80,8 +84,9 @@ func main() {
 
 	instancesHandler := NewInstancesHandler(queries)
 	healthHandler := NewHealthHandler()
+	dashboardHandler := NewDashboardHandler(queries)
 
-	router.Get("/v1/healthz", healthHandler.health)
+	router.Get("/v1/healthz", healthHandler.Health)
 
 	router.Group(func(r chi.Router) {
 		r.Use(cors.Handler(cors.Options{
@@ -94,6 +99,13 @@ func main() {
 		r.Use(rateLimiter.limit)
 		r.Post("/v1/instances/heartbeat", instancesHandler.Heartbeat)
 	})
+
+	if config.DashboardEnabled {
+		router.Get("/dashboard", dashboardHandler.Dashboard)
+	}
+
+	router.Get("/favicon.txt", dashboardHandler.Favicon)
+	router.Get("/robots.txt", dashboardHandler.Robots)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", config.Address, config.Port),

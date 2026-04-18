@@ -12,7 +12,7 @@ func NewHealthHandler() *HealthHandler {
 	return &HealthHandler{}
 }
 
-func (h *HealthHandler) health(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	render.JSON(w, r, map[string]string{
 		"status":  "200",

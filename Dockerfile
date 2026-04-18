@@ -11,11 +11,14 @@ COPY go.sum ./
 RUN go mod download
 
 COPY ./cache.go ./
+COPY ./dashboard.html ./
+COPY ./dashboard_handler.go ./
+COPY ./favicon.ico ./
 COPY ./health_handler.go ./
 COPY ./instances_handler.go ./
 COPY ./main.go ./
 COPY ./rate_limiter.go ./
-COPY ./database ./database
+COPY ./queries ./queries
 
 RUN CGO_ENABLED=0 go build -o analytics -ldflags "-s -w -X main.version=${VERSION}"
 

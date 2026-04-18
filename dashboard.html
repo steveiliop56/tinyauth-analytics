@@ -7,6 +7,7 @@
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <title>Dashboard</title>
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style type="text/tailwindcss">
             @theme {
                 --color-fd-background: #121212;
@@ -25,19 +26,40 @@
                 --color-fd-accent: #6868684d;
                 --color-fd-accent-foreground: #e6e6e6;
                 --color-fd-ring: #8c8c8c;
+                --color-fd-blue: #3b82f6;
+                --color-fd-blue-soft: #3b82f633;
             }
         </style>
         <style>
             :root {
                 color-scheme: dark;
             }
+            .stat-card {
+                transition:
+                    border-color 0.2s ease,
+                    transform 0.2s ease,
+                    background-color 0.2s ease;
+            }
+            .stat-card:hover {
+                border-color: var(--color-fd-blue);
+                transform: translateY(-2px);
+            }
+            .stat-value {
+                transition: color 0.2s ease;
+            }
+            .chart-wrapper {
+                position: relative;
+                width: 100%;
+                min-height: 0;
+                flex: 1 1 auto;
+            }
         </style>
     </head>
 
     <body
-        class="flex flex-col font-sans bg-fd-background text-fd-foreground min-h-screen"
+        class="flex flex-col font-sans bg-fd-background text-fd-foreground h-screen overflow-hidden"
     >
-        <header class="border-b border-fd-border">
+        <header class="border-b border-fd-border shrink-0">
             <div class="flex flex-row justify-between items-center px-4 h-14">
                 <div class="flex flex-row gap-1.5 items-center">
                     <img
@@ -59,7 +81,7 @@
                         target="_blank"
                         rel="noreferrer"
                         aria-label="GitHub Repository"
-                        class="rounded-full border p-1 hover:opacity-80 transform-colors delay-100 border-fd-border hover:cursor-pointer"
+                        class="rounded-full border p-1 hover:opacity-80 transition-colors border-fd-border hover:cursor-pointer hover:border-fd-blue"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -76,108 +98,108 @@
                 </div>
             </div>
         </header>
-        <main class="flex flex-col flex-1 p-4 gap-4">
-            <div class="grid grid-cols-2 gap-4">
+        <main class="flex flex-col flex-1 p-4 gap-4 min-h-0">
+            <div class="grid grid-cols-2 gap-4 shrink-0">
                 <div
-                    class="flex flex-col gap-2 p-4 border border-fd-border rounded-md items-center justify-center"
+                    class="stat-card flex flex-col gap-2 p-4 border border-fd-border rounded-md items-center justify-center"
                 >
                     <div class="font-bold text-xl md:text-2xl text-center">
                         Total instances
                     </div>
                     <div
-                        class="text-2xl md:text-3xl font-black text-fd-accent-foreground"
+                        class="stat-value text-2xl md:text-3xl font-black text-fd-accent-foreground"
                     >
-                        {{.TotalInstances}}
+                        {{.Total}}
                     </div>
                 </div>
                 <div
-                    class="flex flex-col gap-2 p-4 border border-fd-border rounded-md items-center justify-center"
+                    class="stat-card flex flex-col gap-2 p-4 border border-fd-border rounded-md items-center justify-center"
                 >
                     <div class="font-bold text-xl md:text-2xl text-center">
                         Most used version
                     </div>
                     <div
-                        class="text-2xl md:text-3xl font-black text-fd-accent-foreground"
+                        class="stat-value text-2xl md:text-3xl font-black text-fd-accent-foreground"
                     >
-                        {{.MostUsedVersion}}
+                        {{.MostUsed}}
                     </div>
                 </div>
             </div>
             <div
-                class="flex flex-1 flex-col gap-4 p-4 border border-fd-border rounded-md"
+                class="chart-wrapper stat-card border border-fd-border rounded-md p-4"
             >
-                <div class="overflow-auto text-nowrap">
-                    <table class="rounded-t-md border border-fd-border w-full">
-                        <thead class="bg-fd-card">
-                            <tr class="border-b border-fd-border">
-                                <th
-                                    class="text-start p-4 border-r border-fd-border"
-                                >
-                                    UUID
-                                </th>
-                                <th
-                                    class="text-start p-4 border-r border-fd-border"
-                                >
-                                    Version
-                                </th>
-                                <th
-                                    class="text-start p-4 border-r border-fd-border"
-                                >
-                                    Last Seen
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{range .Instances}}
-                            <tr
-                                class="border-b border-fd-border"
-                                id="instance-{{.UUID}}"
-                            >
-                                <td class="p-4 border-r border-fd-border">
-                                    {{.UUID}}
-                                </td>
-                                <td class="p-4 border-r border-fd-border">
-                                    {{.Version}}
-                                </td>
-                                <td
-                                    class="p-4 border-r border-fd-border"
-                                    id="instance-{{.UUID}}-time"
-                                >
-                                    {{.LastSeen}}
-                                </td>
-                            </tr>
-                            {{end}}
-                        </tbody>
-                    </table>
-                </div>
-                {{if lt .NextPage .MaxPages }}
-                <a
-                    href="/?page={{.NextPage}}"
-                    class="text-center text-fd-muted-foreground text-md hover:underline hover:cursor-pointer"
-                    >Load more...</a
-                >
-                {{end}}
+                <canvas id="versionChart"></canvas>
             </div>
         </main>
         <footer
-            class="w-full border-t border-fd-border bg-fd-card items-center justify-center p-6"
+            class="w-full border-t border-fd-border bg-fd-card items-center justify-center p-4 shrink-0"
         >
-            <p class="text-md font-medium text-center">
-                Copyright &copy; 2025 Tinyauth
+            <p class="text-sm font-medium text-center">
+                Copyright &copy; 2026 Tinyauth
             </p>
         </footer>
     </body>
 
     <script>
-        window.onload = function () {
-            const instances = document.querySelectorAll("tr[id^='instance-']");
-            instances.forEach((instance) => {
-                const timeCell = instance.querySelector("td[id$='-time']");
-                const timestamp = timeCell.textContent;
-                const date = new Date(Number.parseInt(timestamp));
-                const formattedDate = date.toLocaleString();
-                timeCell.textContent = formattedDate;
-            });
-        };
+        const ctx = document.getElementById('versionChart');
+        const blue = '#3b82f6';
+        const blueSoft = 'rgba(59, 130, 246, 0.25)';
+
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: {{.VersionLabels}},
+            datasets: [{
+              label: 'Instances',
+              data: {{.VersionValues}},
+              backgroundColor: blueSoft,
+              borderColor: blue,
+              borderWidth: 1,
+              borderRadius: 4,
+              hoverBackgroundColor: blue,
+              hoverBorderColor: blue
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+              duration: 700,
+              easing: 'easeOutQuart'
+            },
+            interaction: {
+              mode: 'nearest',
+              intersect: true
+            },
+            plugins: {
+              legend: {
+                labels: { color: '#ebebeb' }
+              },
+              tooltip: {
+                backgroundColor: '#1e1e1e',
+                titleColor: '#fafafa',
+                bodyColor: '#dedede',
+                borderColor: blue,
+                borderWidth: 1,
+                padding: 10,
+                displayColors: false,
+                callbacks: {
+                  label: (ctx) => `${ctx.parsed.y} instance${ctx.parsed.y === 1 ? '' : 's'}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#b3b3b3' },
+                grid: { color: 'rgba(102,102,102,0.15)' }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { color: '#b3b3b3' },
+                grid: { color: 'rgba(102,102,102,0.15)' }
+              }
+            },
+          }
+        });
     </script>
 </html>
