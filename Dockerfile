@@ -24,7 +24,7 @@ COPY ./queries ./queries
 RUN CGO_ENABLED=0 go build -o analytics -ldflags "-s -w -X main.version=${VERSION}"
 
 # Runner
-FROM alpine:3.23 AS runner
+FROM alpine:3.24 AS runner
 
 WORKDIR /analytics
 
