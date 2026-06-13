@@ -79,7 +79,6 @@ func main() {
 	);`)
 
 	queries := queries.New(sqlDb)
-	cache := NewCache()
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
@@ -87,7 +86,7 @@ func main() {
 	rateLimiter := NewRateLimiter(RateLimitConfig{
 		RateLimitCount: config.RateLimitCount,
 		TrustedProxies: config.TrustedProxies,
-	}, cache)
+	})
 
 	instancesHandler := NewInstancesHandler(queries)
 	healthHandler := NewHealthHandler()
