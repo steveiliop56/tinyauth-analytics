@@ -59,10 +59,10 @@ func (rl *RateLimiter) limit(next http.Handler) http.Handler {
 			}
 			current++
 			used = current
+			actions.Update(clientIP, current, 0)
 			if current > rl.config.RateLimitCount {
 				return
 			}
-			actions.Update(clientIP, current, 0)
 		})
 
 		w.Header().Set("x-ratelimit-limit", fmt.Sprint(rl.config.RateLimitCount))
@@ -97,6 +97,7 @@ func (rl *RateLimiter) getClientIP(r *http.Request) string {
 
 		if xForwardedFor != "" {
 			firstIp := strings.SplitN(xForwardedFor, ",", 2)[0]
+			firstIp = strings.TrimSpace(firstIp)
 			if firstIp != "" {
 				return firstIp
 			}
