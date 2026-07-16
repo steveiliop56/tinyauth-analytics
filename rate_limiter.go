@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/tinyauthapp/tinyauth/pkg/cache"
 )
 
 type RateLimitConfig struct {
@@ -17,7 +19,7 @@ type RateLimitConfig struct {
 type RateLimiter struct {
 	config RateLimitConfig
 	caches struct {
-		ratelimit *CacheStore[int]
+		ratelimit *cache.CacheStore[int]
 	}
 }
 
@@ -26,7 +28,7 @@ func NewRateLimiter(config RateLimitConfig) *RateLimiter {
 		config: config,
 	}
 
-	ratelimitCache := NewCacheStore[int](0)
+	ratelimitCache := cache.NewCacheStore[int](0)
 	rl.caches.ratelimit = ratelimitCache
 
 	go func() {
@@ -50,7 +52,7 @@ func (rl *RateLimiter) limit(next http.Handler) http.Handler {
 		}
 
 		var used int
-		rl.caches.ratelimit.WithLock(func(actions CacheStoreActions[int]) {
+		rl.caches.ratelimit.WithLock(func(actions cache.CacheStoreActions[int]) {
 			current, exists := actions.Get(clientIP)
 			if !exists {
 				actions.Set(clientIP, 1, 12*time.Hour)
