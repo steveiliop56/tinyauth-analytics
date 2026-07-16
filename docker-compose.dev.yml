@@ -13,6 +13,7 @@ services:
       - CORS_ALLOWED_ORIGINS=*
       - TRUSTED_PROXIES=0.0.0.0
       - DASHBOARD_ENABLED=true
+      - MIN_TAG_INSTANCES=10
     volumes:
       - ./data:/data
     ports:

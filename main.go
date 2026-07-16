@@ -34,6 +34,7 @@ type Config struct {
 	CORSAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
 	DashboardEnabled   bool     `mapstructure:"dashboard_enabled"`
 	BadgeEnabled       bool     `mapstructure:"badge_enabled"`
+	MinTagInstances    int      `mapstructure:"min_tag_instances"`
 }
 
 func main() {
@@ -47,6 +48,7 @@ func main() {
 	v.SetDefault("cors_allowed_origins", []string{"*"})
 	v.SetDefault("dashboard_enabled", true)
 	v.SetDefault("badge_enabled", true)
+	v.SetDefault("min_tag_instances", 10)
 
 	v.AutomaticEnv()
 
@@ -112,7 +114,7 @@ func main() {
 	})
 
 	if config.DashboardEnabled {
-		dashboardHandler := NewDashboardHandler(queries)
+		dashboardHandler := NewDashboardHandler(queries, config.MinTagInstances)
 		router.Get("/dashboard", dashboardHandler.Dashboard)
 		router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "image/x-icon")

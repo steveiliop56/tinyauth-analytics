@@ -1,7 +1,8 @@
 # Builder
-FROM golang:1.25-alpine3.21 AS builder
+FROM golang:1.26-alpine3.23 AS builder
 
 ARG VERSION
+ARG LDFLAGS
 
 WORKDIR /analytics
 
@@ -11,7 +12,6 @@ COPY go.sum ./
 RUN go mod download
 
 COPY ./badge_handler.go ./
-COPY ./cache.go ./
 COPY ./dashboard.html ./
 COPY ./dashboard_handler.go ./
 COPY ./favicon.ico ./
@@ -21,7 +21,7 @@ COPY ./main.go ./
 COPY ./rate_limiter.go ./
 COPY ./queries ./queries
 
-RUN CGO_ENABLED=0 go build -o analytics -ldflags "-s -w -X main.version=${VERSION}"
+RUN CGO_ENABLED=0 go build -o analytics -ldflags "${LDFLAGS} -X main.version=${VERSION}"
 
 # Runner
 FROM alpine:3.23 AS runner
