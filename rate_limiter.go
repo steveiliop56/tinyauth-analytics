@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"slices"
-	"sync"
+	"strings"
 	"time"
+
+	"github.com/tinyauthapp/tinyauth/pkg/cache"
 )
 
 type RateLimitConfig struct {
@@ -17,63 +18,65 @@ type RateLimitConfig struct {
 
 type RateLimiter struct {
 	config RateLimitConfig
-	cache  *Cache
-	mutex  sync.RWMutex
+	caches struct {
+		ratelimit *cache.CacheStore[int]
+	}
 }
 
-func NewRateLimiter(config RateLimitConfig, cache *Cache) *RateLimiter {
-	return &RateLimiter{
+func NewRateLimiter(config RateLimitConfig) *RateLimiter {
+	rl := &RateLimiter{
 		config: config,
-		cache:  cache,
 	}
+
+	ratelimitCache := cache.NewCacheStore[int](0)
+	rl.caches.ratelimit = ratelimitCache
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			rl.caches.ratelimit.Sweep()
+		}
+	}()
+
+	return rl
 }
 
 func (rl *RateLimiter) limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rl.mutex.Lock()
-		defer rl.mutex.Unlock()
-
 		clientIP := rl.getClientIP(r)
-
 		if clientIP == "" {
 			http.Error(w, "failed to determine client ip", http.StatusInternalServerError)
 			return
 		}
 
-		value, exists := rl.cache.Get(clientIP)
+		var used int
+		rl.caches.ratelimit.WithLock(func(actions cache.CacheStoreActions[int]) {
+			current, exists := actions.Get(clientIP)
+			if !exists {
+				actions.Set(clientIP, 1, 12*time.Hour)
+				used = 1
+				return
+			}
+			current++
+			used = current
+			actions.Update(clientIP, current, 0)
+			if current > rl.config.RateLimitCount {
+				return
+			}
+		})
 
 		w.Header().Set("x-ratelimit-limit", fmt.Sprint(rl.config.RateLimitCount))
-		w.Header().Set("x-ratelimit-reset", fmt.Sprint(time.Now().Add(12*time.Hour).Unix()))
-
-		if !exists {
-			rl.cache.Set(clientIP, 1, 43200) // 12 hours TTL
-			w.Header().Set("x-ratelimit-remaining", fmt.Sprint(rl.config.RateLimitCount-1))
-			w.Header().Set("x-ratelimit-used", fmt.Sprint(1))
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		used, ok := value.(int)
-
-		if !ok {
-			slog.Error("failed to assert rate limit cache value type")
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		used++
+		w.Header().Set("x-ratelimit-used", fmt.Sprint(used))
 
 		if used > rl.config.RateLimitCount {
-			w.Header().Set("x-ratelimit-remaining", fmt.Sprint(0))
-			w.Header().Set("x-ratelimit-used", fmt.Sprint(used))
+			w.Header().Set("x-ratelimit-remaining", "0")
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}
 
-		rl.cache.Set(clientIP, used, 43200) // 12 hours TTL
-
 		w.Header().Set("x-ratelimit-remaining", fmt.Sprint(rl.config.RateLimitCount-used))
-		w.Header().Set("x-ratelimit-used", fmt.Sprint(used))
 		next.ServeHTTP(w, r)
 	})
 }
@@ -92,10 +95,14 @@ func (rl *RateLimiter) getClientIP(r *http.Request) string {
 	}
 
 	if slices.Contains(rl.config.TrustedProxies, ip) {
-		xForwardedFor := r.Header.Values("x-forwarded-for")
+		xForwardedFor := r.Header.Get("x-forwarded-for")
 
-		if len(xForwardedFor) > 0 {
-			return xForwardedFor[0]
+		if xForwardedFor != "" {
+			firstIp := strings.SplitN(xForwardedFor, ",", 2)[0]
+			firstIp = strings.TrimSpace(firstIp)
+			if firstIp != "" {
+				return firstIp
+			}
 		}
 	}
 
