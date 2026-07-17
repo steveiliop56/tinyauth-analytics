@@ -13,7 +13,8 @@ import (
 var dashboardTemplate string
 
 type DashboardHandler struct {
-	queries *queries.Queries
+	queries         *queries.Queries
+	minTagInstances int
 }
 
 type versionStats struct {
@@ -23,9 +24,10 @@ type versionStats struct {
 	VersionValues []int
 }
 
-func NewDashboardHandler(queries *queries.Queries) *DashboardHandler {
+func NewDashboardHandler(queries *queries.Queries, minTagInstances int) *DashboardHandler {
 	return &DashboardHandler{
-		queries: queries,
+		queries:         queries,
+		minTagInstances: minTagInstances,
 	}
 }
 
@@ -45,6 +47,9 @@ func (h *DashboardHandler) compileVersionStats(instances []queries.Instance) ver
 	versionValues := make([]int, 0, len(stats))
 
 	for version, count := range stats {
+		if count < h.minTagInstances {
+			continue
+		}
 		if count > maxCount {
 			maxCount = count
 			mostUsed = version

@@ -38,6 +38,7 @@ jobs:
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           build-args: |
             VERSION=${{ github.ref_name }}
+            LDFLAGS=-s -w
 
       - name: Export digest
         run: |
@@ -85,6 +86,7 @@ jobs:
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           build-args: |
             VERSION=${{ github.ref_name }}
+            LDFLAGS=-s -w
 
       - name: Export digest
         run: |
