@@ -8,7 +8,7 @@ require (
 	github.com/go-chi/render v1.0.3
 	github.com/spf13/viper v1.21.0
 	github.com/tinyauthapp/tinyauth v1.0.1-0.20260716230434-a7eba59a4243
-	modernc.org/sqlite v1.54.0
+	modernc.org/sqlite v1.55.0
 )
 
 require (
