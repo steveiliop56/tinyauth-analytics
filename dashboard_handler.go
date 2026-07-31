@@ -1,10 +1,12 @@
 package main
 
 import (
+	"cmp"
 	_ "embed"
 	"html/template"
 	"log"
 	"net/http"
+	"slices"
 
 	"github.com/tinyauthapp/analytics/queries"
 )
@@ -29,6 +31,33 @@ func NewDashboardHandler(queries *queries.Queries, minTagInstances int) *Dashboa
 		queries:         queries,
 		minTagInstances: minTagInstances,
 	}
+}
+
+func (h *DashboardHandler) sortVersionStats(stats versionStats) versionStats {
+	type versionKv struct {
+		label string
+		value int
+	}
+
+	versionKvs := make([]versionKv, len(stats.VersionLabels))
+
+	for i, version := range stats.VersionLabels {
+		versionKvs[i] = versionKv{version, stats.VersionValues[i]}
+	}
+
+	slices.SortStableFunc(versionKvs, func(a, b versionKv) int {
+		return cmp.Compare(b.value, a.value)
+	})
+
+	stats.VersionLabels = make([]string, len(versionKvs))
+	stats.VersionValues = make([]int, len(versionKvs))
+
+	for i, kv := range versionKvs {
+		stats.VersionLabels[i] = kv.label
+		stats.VersionValues[i] = kv.value
+	}
+
+	return stats
 }
 
 func (h *DashboardHandler) compileVersionStats(instances []queries.Instance) versionStats {
@@ -76,6 +105,7 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	versionStats := h.compileVersionStats(instances)
+	versionStatsSorted := h.sortVersionStats(versionStats)
 
 	tmpl, err := template.New("dashboard").Parse(dashboardTemplate)
 	if err != nil {
@@ -83,7 +113,7 @@ func (h *DashboardHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = tmpl.Execute(w, versionStats)
+	err = tmpl.Execute(w, versionStatsSorted)
 
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
