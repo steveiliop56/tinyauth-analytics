@@ -46,7 +46,10 @@ func (h *DashboardHandler) sortVersionStats(stats versionStats) versionStats {
 	}
 
 	slices.SortStableFunc(versionKvs, func(a, b versionKv) int {
-		return cmp.Compare(b.value, a.value)
+		if order := cmp.Compare(b.value, a.value); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.label, b.label)
 	})
 
 	stats.VersionLabels = make([]string, len(versionKvs))
